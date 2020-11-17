@@ -6,12 +6,14 @@ workers in python that gather data for batches.
 """
 from torchvision.transforms import ToTensor, Resize, Grayscale, Compose
 from torch.utils.data import Dataset
+import torch
 from PIL import Image,  ImageFile
 from enum import Enum, unique
 from collections import defaultdict
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import string
 
 
 # allowing for truncated images to be loaded
@@ -64,7 +66,7 @@ class OCRDataSet(Dataset):
     This class shall be used as a base class for datasets dealing with OCR.
     """
 
-    def __init__(self, img_paths, gt_paths, f_split=None, transformation=ToTensor()):
+    def __init__(self, img_paths, gt_paths, f_split=None, transformation=ToTensor(), alphabet=None):
         """
         :param img_paths: paths of all images
         :param gt_paths: paths to respective line transcriptions
@@ -78,18 +80,28 @@ class OCRDataSet(Dataset):
         sorted_idcs = np.argsort(self.img_paths)
         self.img_paths = self.img_paths[sorted_idcs]
         self.gt_paths = self.gt_paths[sorted_idcs]
+        # sanity of paths
         assert len(self.gt_paths) == len(self.img_paths), "Number of line image and and annotiation files have to be equal."
+        # defining the alphabet of the dataset
+        if alphabet is None:
+            self.character_classes = self.__character_classes()
+        else:
+            self.character_classes = alphabet
+        self.character_int_map = {c: i+1 for i, c in enumerate(self.character_classes)}
+        self.int_chatacter_map = {i+1: c for i, c in enumerate(self.character_classes)}
+        # defining the transformations
         self.trans = transformation
         self.grayscale = Grayscale(num_output_channels=1)
+        # storing the function, that creates the train/ test splits and applying it
         self.f_split = f_split
         self.__apply_split()
 
     def __getitem__(self, idx):
         """
         :param idx: index of image NOTE: this is NOT the images ID, but simply it's files index in self.img_paths
-        :return: Image tensor and transcription of the indexed line
+        :return: Image tensor and embedding of the indexed line
         """
-        return self.__load_img(self.img_paths[idx]), self.__line(self.gt_paths[idx])
+        return self.__load_img(self.img_paths[idx]), self.word_to_embedding(self.line(self.gt_paths[idx]))
 
     def __len__(self):
         return len(self.gt_paths)
@@ -108,14 +120,14 @@ class OCRDataSet(Dataset):
             tensor = self.grayscale(tensor[:3, :, :])
         return tensor
 
-    def __line(self, gt_path):
+    def line(self, gt_path):
         """
         :param gt_path: path to the txt file containing the lines transcript
         :return: the lines transcript
         """
         with open(gt_path, 'r') as f_gt:
             line = ''.join(f_gt.readlines())
-            line = line.rstrip()
+        line = line.rstrip()
         return line
 
     def __apply_split(self):
@@ -125,6 +137,37 @@ class OCRDataSet(Dataset):
         if self.f_split is not None:
             self.img_paths = self.f_split(self.img_paths)
             self.gt_paths = self.f_split(self.gt_paths)
+
+    def __character_classes(self):
+        """
+        extracts the set of all characters in the dara set
+
+        :return: array of all character-classes
+        """
+        c_set = set()
+        for pth in self.gt_paths:
+            line = self.line(pth)
+            c_set = c_set.union(set(line))
+        c_list = sorted(c_set)
+        return np.array(c_list)
+
+    def word_to_embedding(self, word):
+        """
+        Takes a word and encodes it into a CTC representation
+
+        :param word: string of word
+        :return: embedding / mapping to ints
+        """
+        return torch.from_numpy(np.array([self.character_int_map[c] for c in word], dtype=np.int_))
+
+    def embedding_to_word(self, emb):
+        """
+        Takes an embedding and decodes it into a string representation
+
+        :param emb: sequence of integer values of a word
+        :return: string / word representation
+        """
+        return ''.join([self.int_chatacter_map[int(i.detach().numpy())] for i in emb])
 
     def display_img(self, idx, show=False, ax=None):
         """
@@ -166,5 +209,6 @@ class GT4HistOCR(OCRDataSet):
         fltr_in_corpora = (np.sum([np.char.count(img_paths, CORPUS_TO_SUBDIR[c]) for c in corpora], axis=0) > 0).astype(bool)
         img_paths,  gt_paths = img_paths[fltr_in_corpora], gt_paths[fltr_in_corpora]
         # initialize the OCR data set
-        super().__init__(img_paths,  gt_paths, f_split=f_split, transformation=transformation)
+        alphabet = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'GT4HistOCR_alphabet.npy'))
+        super().__init__(img_paths,  gt_paths, f_split=f_split, transformation=transformation, alphabet=alphabet)
 
