@@ -13,10 +13,6 @@ from collections import defaultdict
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import string
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
 # allowing for truncated images to be loaded
@@ -26,21 +22,15 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 # The GT4HistOCR consists of different corpora, this enum serves for the sake separability
 @unique
 class Corpus(Enum):
-    EarlyModernLatin = 1
-    Kallimachos = 2
-    RIDGES_Fraktur = 3
-    RefCorpus_ENHG_Incunabula = 4
-    dta19 = 5
+    EarlyModernLatin = 'EarlyModernLatin'
+    Kallimachos = 'Kallimachos'
+    RIDGES_Fraktur = 'RIDGES-Fraktur'
+    RefCorpus_ENHG_Incunabula = 'dta19'
+    dta19 = 'RefCorpus-ENHG-Incunabula'
 
 
 # Most likely we will use all corpora, hence this global constant
 ALL_CORPORA = tuple(Corpus)
-
-
-# This dictionary maps the enum variables to the sudirectories in the "corpus" folder of GT4HistOCR
-CORPUS_TO_SUBDIR = {Corpus.EarlyModernLatin: 'EarlyModernLatin', Corpus.Kallimachos: 'Kallimachos',
-                    Corpus.RIDGES_Fraktur: 'RIDGES-Fraktur', Corpus.dta19: 'dta19',
-                    Corpus.RefCorpus_ENHG_Incunabula: 'RefCorpus-ENHG-Incunabula'}
 
 
 def search_files(dir_start, suffixes=['.png']):
@@ -209,7 +199,7 @@ class GT4HistOCR(OCRDataSet):
         # gather image paths and gt annotations
         img_paths, gt_paths = map(np.array, search_files(dset_path, suffixes=['.png',  '.txt']))
         # filter for used corpora
-        fltr_in_corpora = (np.sum([np.char.count(img_paths, CORPUS_TO_SUBDIR[c]) for c in corpora], axis=0) > 0).astype(bool)
+        fltr_in_corpora = (np.sum([np.char.count(img_paths, c.value) for c in corpora], axis=0) > 0).astype(bool)
         img_paths,  gt_paths = img_paths[fltr_in_corpora], gt_paths[fltr_in_corpora]
         # initialize the OCR data set
         alphabet = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'GT4HistOCR_alphabet.npy'))
