@@ -14,6 +14,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import string
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
 # allowing for truncated images to be loaded
