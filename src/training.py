@@ -64,10 +64,10 @@ class Trainer:
 
 def arg_parser():
     ap = ArgumentParser()
-    ap.add_argument('--iterations', default=int(1e5))
-    ap.add_argument('--data_set', default='GT4HistOCR')
-    ap.add_argument('--batch_size', default=16)
-    ap.add_argument('--device', default='cpu')
+    ap.add_argument('--iterations', default=int(1e5), type=int)
+    ap.add_argument('--data_set', default='GT4HistOCR', type=str)
+    ap.add_argument('--batch_size', default=16, type=int)
+    ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--out', default=None)
     return ap
 
