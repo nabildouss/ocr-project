@@ -5,6 +5,7 @@ Using the torch DataLoader is important, as we have a lazy loading approach and 
 workers in python that gather data for batches.
 """
 from torchvision.transforms import ToTensor, Resize, Grayscale, Compose
+from torchvision.transforms.functional import rgb_to_grayscale
 from torch.utils.data import Dataset
 import torch
 from PIL import Image,  ImageFile
@@ -84,7 +85,6 @@ class OCRDataSet(Dataset):
         self.int_chatacter_map = {i+1: c for i, c in enumerate(self.character_classes)}
         # defining the transformations
         self.trans = transformation
-        self.grayscale = Grayscale(num_output_channels=1)
         # storing the function, that creates the train/ test splits and applying it
         self.__apply_split(f_split)
 
@@ -111,6 +111,9 @@ class OCRDataSet(Dataset):
         if tensor.shape[0] > 1:
             tensor = self.grayscale(tensor[:3, :, :])
         return tensor
+
+    def grayscale(self, x):
+        return rgb_to_grayscale(x, num_output_channels=1)
 
     def line(self, gt_path):
         """
