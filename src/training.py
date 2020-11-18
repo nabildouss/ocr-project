@@ -36,8 +36,6 @@ class Trainer:
             # new data loader required after each epoch
             dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
                                  collate_fn=self.dset.batch_transform)
-            pass
-            k = 1000
             for batch, targets, l_targets in dloader:
                 # moving the data to the (GPU-) device
                 batch, targets = batch.to(self.device), targets.to(self.device)

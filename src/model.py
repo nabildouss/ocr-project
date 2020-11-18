@@ -38,7 +38,6 @@ class ColumnPooling(nn.Module):
         self.shape_in = shape_in
         k_height = int(shape_in[0])
         #k_width = int(shape_in[1])
-        self.n_columns = 1 #n_columns
         self.pooling = nn.MaxPool2d(kernel_size=(k_height, 1), stride=1)
 
     def forward(self, f_maps):
