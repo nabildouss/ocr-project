@@ -5,7 +5,9 @@ Unittests can be executed via your IDE of choice or directly from terminal, e.g.
 """
 from unittest import TestCase
 import sys
-sys.path.append('..')
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.data import *
 import numpy as np
 from torch.utils.data import DataLoader
