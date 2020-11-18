@@ -73,7 +73,7 @@ def arg_parser():
 
 
 if __name__ == '__main__':
-    ap = arg_parser()
+    ap = arg_parser().parse_args()
     train, _ = ms1.load_data(ap.data_set, n_train=0.75, n_test=0.25)
     model = BaseLine(n_char_class=len(train.character_classes))
     trainer = Trainer(model, train, iterations=ap.iterations, s_batch=ap.batch_size, device=ap.device)
