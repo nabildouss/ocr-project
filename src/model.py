@@ -73,7 +73,7 @@ class BaseLine(nn.Module):
         in_channels, h, w = shape_in
         # a generic definition of convolution layers, all layers shall have the same activation and batch normalization
         conv_layer = lambda c_in, c_out: nn.Sequential(nn.Conv2d(kernel_size=3, in_channels=c_in, out_channels=c_out,
-                                                                 padding=1), nn.ReLU(), nn.BatchNorm2d(c_out))
+                                                                 padding=1), nn.ReLU())#, nn.BatchNorm2d(c_out))
         # a generic definition of fully connected layers, all layers shall have the same activatin
         fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.ReLU())
 
@@ -101,13 +101,13 @@ class BaseLine(nn.Module):
         # calculating how many features the CNN provides the fully connected classifier
         n_features_in = shape_in[2] * f_scale * n_fmaps_final_layer
         # allowing for three fully connected layers, dropout is usd for regularization
-        self.fc1 = nn.Sequential(fc_layer(int(n_features_in), 1024),
-                                 fc_layer(1024, 1024), nn.Dropout(p=0.5),
-                                 fc_layer(1024, 1024), nn.Dropout(p=0.5))
+        self.fc1 = nn.Sequential(fc_layer(int(n_features_in), 1024))#,
+                                 #fc_layer(1024, 1024), nn.Dropout(p=0.5),
+                                 #fc_layer(1024, 1024), nn.Dropout(p=0.5))
         # the final layers:
         # the penultimate layer has no dropout
         # and the final layer is subject to reshaping and transposing to allow for the CTCLoss function
-        self.out = nn.Sequential(fc_layer(1024, 1024),
+        self.out = nn.Sequential(#fc_layer(1024, 1024),
                                  nn.Linear(1024, n_char_class * sequence_length),
                                  Reshape([sequence_length, n_char_class]), nn.LogSoftmax(dim=2), Transpose([0, 1]))
 

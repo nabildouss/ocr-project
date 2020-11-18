@@ -110,6 +110,9 @@ class OCRDataSet(Dataset):
         # grayscale conversion in case of RGB (3 channels) or RGB + opacity (4 channels) image representations
         if tensor.shape[0] > 1:
             tensor = self.grayscale(tensor[:3, :, :])
+        # normalizae lighting
+        tensor -=  tensor.min()
+        tensor /=  tensor.max()
         return tensor
 
     def grayscale(self, x):
