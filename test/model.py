@@ -8,7 +8,7 @@ import torch
 class TestBaseLine(TestCase):
 
     def setUp(self):
-        self.model = BaseLine(shape_in=(1, 64, 512), n_pool_columns=100, n_char_class=100, sequence_length=100)
+        self.model = BaseLine(shape_in=(1, 64, 512), n_char_class=100, sequence_length=100)
 
     def testForward(self):
         input = torch.rand(size=(16, 1, 64, 512))

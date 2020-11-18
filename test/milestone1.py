@@ -3,9 +3,13 @@ import sys
 sys.path.append('..')
 import src.milestone1 as ms1
 import numpy as np
+from torch.utils.data import DataLoader
 
 
 class TestMS1(TestCase):
+    """
+    This class features tests for the Milestone 1 methods
+    """
 
     def test_show(self):
         imgs = np.random.randint(0, 255, size=(6, 64, 512))
@@ -24,3 +28,9 @@ class TestMS1(TestCase):
         train, test = ms1.load_data(n_train=750, n_test=250)
         self.assertEqual(len(train), 750)
         self.assertEqual(len(test), 250)
+
+    def test_dloader(self):
+        train, test = ms1.load_data(n_train=0.75, n_test=0.25)
+        d_loader = DataLoader(dataset=test, num_workers=4, batch_size=16, collate_fn=test.batch_transform)
+        for batch, targets, l_targets in d_loader:
+            pass

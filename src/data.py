@@ -86,15 +86,14 @@ class OCRDataSet(Dataset):
         self.trans = transformation
         self.grayscale = Grayscale(num_output_channels=1)
         # storing the function, that creates the train/ test splits and applying it
-        self.f_split = f_split
-        self.__apply_split()
+        self.__apply_split(f_split)
 
     def __getitem__(self, idx):
         """
         :param idx: index of image NOTE: this is NOT the images ID, but simply it's files index in self.img_paths
         :return: Image tensor and embedding of the indexed line
         """
-        return self.__load_img(self.img_paths[idx]), self.word_to_embedding(self.line(self.gt_paths[idx]))
+        return self.__load_img(self.img_paths[idx]), self.line(self.gt_paths[idx])
 
     def __len__(self):
         return len(self.gt_paths)
@@ -123,13 +122,13 @@ class OCRDataSet(Dataset):
         line = line.rstrip()
         return line
 
-    def __apply_split(self):
+    def __apply_split(self, f_split):
         """
         Applying the split function, filtering out paths
         """
-        if self.f_split is not None:
-            self.img_paths = self.f_split(self.img_paths)
-            self.gt_paths = self.f_split(self.gt_paths)
+        if f_split is not None:
+            self.img_paths = f_split(self.img_paths)
+            self.gt_paths = f_split(self.gt_paths)
 
     def __character_classes(self):
         """
@@ -143,6 +142,28 @@ class OCRDataSet(Dataset):
             c_set = c_set.union(set(line))
         c_list = sorted(c_set)
         return np.array(c_list)
+
+    def batch_transform(self, data):
+        """
+        This method is of special importance.
+        The CTCLoss requires input of different length for the targets, this is problematic, as a tensors elements
+        have to be of equal dimensionality. Also we can not work on characters, but integers.
+        To solve this problem, we map all characters to integers (see: self.word_to_embedding) and pad these vectors.
+        To allow CTCLoss to work on unpadded, we pass a list of the original lengths.
+
+        :param data: image - transcription pairs
+        :return: batch of images, padded targets and their lengths
+        """
+        batch, targets, l_targets = [], [], []
+        for img, transcript in data:
+            # images do not need to be changed
+            batch.append(img)
+            # mapping characters to integers
+            targets.append(self.word_to_embedding(transcript))
+            # keeping track of ooriginal lengths
+            l_targets.append(len(transcript))
+        # Tensor conversion for batch and targets, the lengths can stay as a list
+        return torch.stack(batch), torch.nn.utils.rnn.pad_sequence(targets, batch_first=True), l_targets
 
     def word_to_embedding(self, word):
         """

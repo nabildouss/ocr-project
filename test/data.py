@@ -31,9 +31,9 @@ class TestGT4HistOCR(TestCase):
     def test_getitem(self):
         # NOTE: as all ~313k images will be read, this method can take 5-6 minutes to complete
         # allowing for 4 workers and batches of size 16 to speed up iterations
-        d_loader = DataLoader(dataset=self.dset, num_workers=4, batch_size=16)
+        d_loader = DataLoader(dataset=self.dset, num_workers=4, batch_size=16, collate_fn=self.dset.batch_transform)
         # loading all images in an epoch
-        for imgs_batch, transcripts_batch in d_loader:
+        for imgs_batch, targets, l_targets in d_loader:
             pass
 
     def test_display_img(self):
