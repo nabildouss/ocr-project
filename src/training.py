@@ -50,8 +50,8 @@ class Trainer:
                 it_count += 1
                 if it_count >= self.iterations:
                     break
-                if self.debug and it_count % 10 == 0:
-                    print(loss)
+                if self.debug and it_count % 1000 == 0:
+                    print(f'Iteration {it_count}:\t{loss}')
         # moving clearing the GPU memory
         batch.cpu()
         targets.cpu()
@@ -64,6 +64,7 @@ def arg_parser():
     ap.add_argument('--data_set', default='GT4HistOCR')
     ap.add_argument('--batch_size', default=16)
     ap.add_argument('--device', default='cpu')
+    ap.add_argument('--out', default=None)
     return ap
 
 
@@ -72,3 +73,9 @@ if __name__ == '__main__':
     train, _ = ms1.load_data(ap.data_set, n_train=0.75, n_test=0.25)
     model = BaseLine(n_char_class=len(train.character_classes))
     trainer = Trainer(model, train, iterations=ap.iterations, s_batch=ap.batch_size, device=ap.device)
+    trainer.train()
+    if ap.out is not None:
+        if not os.path.isdir(os.path.dirname(ap.out)):
+            os.makedirs(os.path.dirname(ap.out))
+        torch.save(trainer.model.state_dict(), ap.out)
+
