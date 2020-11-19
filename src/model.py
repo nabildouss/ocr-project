@@ -100,11 +100,11 @@ class BaseLine(nn.Module):
         # calculating how many features the CNN provides the fully connected classifier
         n_features_in = shape_in[2] * f_scale * n_fmaps_final_layer *  (1/self.pool3.stride)
         # allowing for three fully connected layers, dropout is usd for regularization
-        self.fc1 = fc_layer(int(n_features_in), self.n_char_class)
+        self.fc1 = fc_layer(int(n_features_in), 2048)
         # the final layers:
         # the penultimate layer has no dropout
         # and the final layer is subject to reshaping and transposing to allow for the CTCLoss function
-        self.out = nn.Sequential(nn.Linear(self.n_char_class, n_char_class * sequence_length),  
+        self.out = nn.Sequential(nn.Linear(2048, n_char_class * sequence_length),  
                                  Reshape([sequence_length, n_char_class]), nn.LogSoftmax(dim=2), Transpose([0, 1]))
 
     def forward(self, x):
