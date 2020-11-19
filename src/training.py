@@ -24,7 +24,7 @@ class Trainer:
         self.prog_bar = prog_bar
 
     def crierion(self):
-        return torch.nn.CTCLoss(zero_infinity=True)
+        return torch.nn.CTCLoss(blank=0), torch.nn.CTCLoss(blank=0, zero_infinity=True)
 
     def optimizer(self):
         return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
@@ -33,7 +33,7 @@ class Trainer:
     def train(self):
         # setting up the training:
         # defined criterion and optimizer
-        criterion, optimizer = self.crierion(), self.optimizer()
+        (criterion, c_inf), optimizer = self.crierion(), self.optimizer()
         # moving the model to the correct (GPU-) device
         self.model.to(self.device)
         if self.prog_bar:
@@ -52,7 +52,10 @@ class Trainer:
                 # forward pass
                 y = self.model(batch)
                 # computing loss and gradients
-                loss = criterion(y.cpu(), targets.cpu(), L_IN, l_targets)
+                loss = criterion(y, targets, L_IN, l_targets)
+                if torch.isnan(loss).item():
+                    #print('nan encountered')
+                    loss = c_inf(y,  targets, L_IN, l_targets)
                 loss.backward()
                 # optimization step
                 optimizer.step()
