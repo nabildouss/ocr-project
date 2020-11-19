@@ -33,16 +33,17 @@ class ColumnPooling(nn.Module):
     This class pools columns and columns only, allowing us to extract more information with respect to time.
     """
 
-    def __init__(self, shape_in):
+    def __init__(self, shape_in, stride=4):
         super().__init__()
         self.shape_in = shape_in
         k_height = int(shape_in[0])
         #k_width = int(shape_in[1])
-        self.pooling = nn.MaxPool2d(kernel_size=(k_height, 1), stride=1)
+        self.pooling = nn.MaxPool2d(kernel_size=(k_height, stride), stride=stride)
+        self.stride = stride 
 
     def forward(self, f_maps):
         y = self.pooling(f_maps)
-        return y.reshape(f_maps.shape[0], f_maps.shape[1]*f_maps.shape[3])
+        return y.reshape(y.shape[0], y.shape[1]*y.shape[3])
 
 
 class BaseLine(nn.Module):
@@ -58,7 +59,7 @@ class BaseLine(nn.Module):
     The output is reshaped and transposed to fit PyTorch's CTCLoss function.
     """
 
-    def __init__(self, shape_in=(1, 64, 512), n_char_class=100, sequence_length=100):
+    def __init__(self, shape_in=(1, 64, 512), n_char_class=100, sequence_length=100, dropout=0.1):
         """
         :param shape_in: shape of the input images
         :param n_char_class: number of character classes (required as we calculate the prob. for CTC)
@@ -73,25 +74,23 @@ class BaseLine(nn.Module):
         in_channels, h, w = shape_in
         # a generic definition of convolution layers, all layers shall have the same activation and batch normalization
         conv_layer = lambda c_in, c_out: nn.Sequential(nn.Conv2d(kernel_size=3, in_channels=c_in, out_channels=c_out,
-                                                                 padding=1), nn.ReLU())#, nn.BatchNorm2d(c_out))
+                                                                 padding=1), nn.LeakyReLU(), nn.Dropout(dropout))
         # a generic definition of fully connected layers, all layers shall have the same activatin
-        fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.ReLU())
+        fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.Sigmoid())
 
         # -------------------------------------------the CNN architecture-------------------------------------------
         # first phase: operating on the original image, no more than 64 layers
-        self.conv1 = nn.Sequential(conv_layer(in_channels, 64),
-                                   conv_layer(64, 64))
+        self.conv1 = nn.Sequential(conv_layer(in_channels, 32),
+                                   conv_layer(32, 32))
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # second phase: after the pooling we allow for 128 feature maps
-        self.conv2 = nn.Sequential(conv_layer(64, 128),
+        self.conv2 = nn.Sequential(conv_layer(32, 128),
                                    conv_layer(128, 128))
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # third phase: finally, after have pooled twice, we allow the CNN to be even deeper and have 512 feature maps
-        n_fmaps_final_layer = 512
+        # third phase: finally, after have pooled twice, we allow the CNN to be even deeper and have 256 feature maps
+        n_fmaps_final_layer = 256
         self.conv3 = nn.Sequential(conv_layer(128, 256),
-                                   conv_layer(256, 256),
-                                   conv_layer(256, 512),
-                                   conv_layer(512, n_fmaps_final_layer))
+                                   conv_layer(256, n_fmaps_final_layer))
         # f_scale is teh scale factor, applied by pooling twice
         f_scale = 1/self.pool1.stride/self.pool2.stride
         # finally pooling for columns
@@ -99,16 +98,14 @@ class BaseLine(nn.Module):
 
         # --------------------------------the fully connected classifiers architecture-------------------------------
         # calculating how many features the CNN provides the fully connected classifier
-        n_features_in = shape_in[2] * f_scale * n_fmaps_final_layer
+        n_features_in = shape_in[2] * f_scale * n_fmaps_final_layer *  (1/self.pool3.stride)
         # allowing for three fully connected layers, dropout is usd for regularization
-        self.fc1 = nn.Sequential(fc_layer(int(n_features_in), 1024))#,
-                                 #fc_layer(1024, 1024), nn.Dropout(p=0.5),
-                                 #fc_layer(1024, 1024), nn.Dropout(p=0.5))
+        print(n_features_in,  n_char_class  *  sequence_length)
+        self.fc1 = fc_layer(int(n_features_in), 1024)
         # the final layers:
         # the penultimate layer has no dropout
         # and the final layer is subject to reshaping and transposing to allow for the CTCLoss function
-        self.out = nn.Sequential(#fc_layer(1024, 1024),
-                                 nn.Linear(1024, n_char_class * sequence_length),
+        self.out = nn.Sequential(nn.Linear(1024, n_char_class * sequence_length),  
                                  Reshape([sequence_length, n_char_class]), nn.LogSoftmax(dim=2), Transpose([0, 1]))
 
     def forward(self, x):

@@ -24,7 +24,7 @@ class Trainer:
         self.prog_bar = prog_bar
 
     def crierion(self):
-        return torch.nn.CTCLoss()
+        return torch.nn.CTCLoss(zero_infinity=True)
 
     def optimizer(self):
         return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
@@ -40,6 +40,8 @@ class Trainer:
             prog_bar = tqdm.tqdm(total=self.iterations)
         # the training loop
         it_count = 0
+        L_IN = [int(self.model.sequence_length) for _ in range(self.s_batch)]
+        epoch_count = 1
         while it_count < self.iterations:
             # new data loader required after each epoch
             dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
@@ -50,7 +52,7 @@ class Trainer:
                 # forward pass
                 y = self.model(batch)
                 # computing loss and gradients
-                loss = criterion(y, targets, [int(self.model.sequence_length) for _ in range(batch.shape[0])], l_targets)
+                loss = criterion(y.cpu(), targets.cpu(), L_IN, l_targets)
                 loss.backward()
                 # optimization step
                 optimizer.step()
@@ -60,7 +62,8 @@ class Trainer:
                     break
                 if self.prog_bar:
                     prog_bar.update(1)
-                    prog_bar.set_description("loss = %f" % loss)
+                    prog_bar.set_description("epoch %d | mean loss = %f" % (epoch_count, loss / self.s_batch))
+            epoch_count += 1
         # moving clearing the GPU memory
         batch.cpu()
         targets.cpu()
