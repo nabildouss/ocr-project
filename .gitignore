@@ -1,5 +1,6 @@
 venv/*
 corpus/*
+models/*
 
 .DS_Store
 */.ipynb_checkpoints/*
