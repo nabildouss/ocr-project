@@ -209,12 +209,13 @@ def CTC_to_int(P):
 
 class Evaluator:
 
-    def __init__(self, model, dset, device, s_batch=16, prog_bar=True):
+    def __init__(self, model, dset, device, s_batch=16, prog_bar=True, n_workers=4):
         self.model = model
         self.dset = dset
         self.device = device
         self.s_batch = s_batch
         self.prog_bar = prog_bar
+        self.n_workers = n_workers
 
     def eval(self):
         self.model.eval()
