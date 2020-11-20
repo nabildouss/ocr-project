@@ -80,16 +80,16 @@ class BaseLine(nn.Module):
 
         # -------------------------------------------the CNN architecture-------------------------------------------
         # first phase: operating on the original image, no more than 64 layers
-        self.conv1 = nn.Sequential(conv_layer(in_channels, 32),
-                                   conv_layer(32, 32))
+        self.conv1 = nn.Sequential(conv_layer(in_channels, 8),
+                                   conv_layer(8, 8))
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # second phase: after the pooling we allow for 128 feature maps
-        self.conv2 = nn.Sequential(conv_layer(32, 32),
-                                   conv_layer(32, 32))
+        self.conv2 = nn.Sequential(conv_layer(8, 16),
+                                   conv_layer(16, 16))
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         # third phase: finally, after have pooled twice, we allow the CNN to be even deeper and have 256 feature maps
         n_fmaps_final_layer = 32
-        self.conv3 = nn.Sequential(conv_layer(32, 32),
+        self.conv3 = nn.Sequential(conv_layer(16, 32),
                                    conv_layer(32, n_fmaps_final_layer))
         # f_scale is teh scale factor, applied by pooling twice
         f_scale = 1/self.pool1.stride/self.pool2.stride

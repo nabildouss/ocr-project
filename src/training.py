@@ -24,7 +24,7 @@ class Trainer:
         self.prog_bar = prog_bar
 
     def crierion(self):
-        return torch.nn.CTCLoss(blank=0)#, zero_infinity=True)
+        return torch.nn.CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
         return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
@@ -52,7 +52,7 @@ class Trainer:
                 # forward pass
                 y = self.model(batch)
                 # computing loss and gradients
-                loss = criterion(y.cpu(), targets.cpu(), L_IN[:len(l_targets)], l_targets)
+                loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
                 if torch.isnan(loss).item():
                     raise ValueError(f"probs: {y.shape} | targets: {targets.shape}")
                 loss.backward()
@@ -85,7 +85,7 @@ def arg_parser():
 
 def run_training(iterations, data_set, batch_size, device, out, prog_bar):
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25)
-    model = BaseLine(n_char_class=300)#len(train.character_classes))
+    model = BaseLine(n_char_class=len(train.character_classes)+1)
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
                       prog_bar=prog_bar)
     trainer.train()
