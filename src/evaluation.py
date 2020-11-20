@@ -10,6 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.model import *
 from src.data import *
 import src.milestone1 as ms1
+import tqdm
 
 
 def avg_wer(wer_scores, combined_ref_len):
@@ -202,9 +203,10 @@ def cer(reference, hypothesis, ignore_case=False, remove_space=False):
 
 
 def CTC_to_int(P):
+    embeddings = []
     for p in P:
-        pass
-    pass
+        embeddings.append(torch.ones(20))
+    return embeddings
 
 
 class Evaluator:
@@ -223,7 +225,7 @@ class Evaluator:
         dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers,
                              collate_fn=self.dset.batch_transform)
         if self.prog_bar:
-            prog_bar = tqdm.tqdm(total=self.iterations)
+            prog_bar = tqdm.tqdm(total=len(self.dset)//self.s_batch)
         l_wer = []
         l_cer = []
         l_adj_wer = []
