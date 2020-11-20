@@ -27,7 +27,7 @@ class Trainer:
         return torch.nn.CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
-        return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
+        return torch.optim.Adam(self.model.parameters(), lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
         #return torch.optim.SGD(self.model.parameters(),  lr=0.001, momentum=0.9)#
 
     def train(self):
