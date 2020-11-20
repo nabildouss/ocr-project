@@ -59,7 +59,7 @@ class BaseLine(nn.Module):
     The output is reshaped and transposed to fit PyTorch's CTCLoss function.
     """
 
-    def __init__(self, shape_in=(1, 64, 512), n_char_class=100, sequence_length=100, dropout=0.1):
+    def __init__(self, shape_in=(1, 64, 512), n_char_class=100, sequence_length=200, dropout=0.1):
         """
         :param shape_in: shape of the input images
         :param n_char_class: number of character classes (required as we calculate the prob. for CTC)
@@ -80,17 +80,17 @@ class BaseLine(nn.Module):
 
         # -------------------------------------------the CNN architecture-------------------------------------------
         # first phase: operating on the original image, no more than 64 layers
-        self.conv1 = nn.Sequential(conv_layer(in_channels, 16),
-                                   conv_layer(16, 16))
+        self.conv1 = nn.Sequential(conv_layer(in_channels, 32),
+                                   conv_layer(32, 32))
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # second phase: after the pooling we allow for 128 feature maps
-        self.conv2 = nn.Sequential(conv_layer(16, 64),
-                                   conv_layer(64, 64))
+        self.conv2 = nn.Sequential(conv_layer(32, 32),
+                                   conv_layer(32, 32))
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         # third phase: finally, after have pooled twice, we allow the CNN to be even deeper and have 256 feature maps
-        n_fmaps_final_layer = 256
-        self.conv3 = nn.Sequential(conv_layer(64, 128),
-                                   conv_layer(128, n_fmaps_final_layer))
+        n_fmaps_final_layer = 32
+        self.conv3 = nn.Sequential(conv_layer(32, 32),
+                                   conv_layer(32, n_fmaps_final_layer))
         # f_scale is teh scale factor, applied by pooling twice
         f_scale = 1/self.pool1.stride/self.pool2.stride
         # finally pooling for columns
@@ -100,12 +100,11 @@ class BaseLine(nn.Module):
         # calculating how many features the CNN provides the fully connected classifier
         n_features_in = shape_in[2] * f_scale * n_fmaps_final_layer *  (1/self.pool3.stride)
         # allowing for three fully connected layers, dropout is usd for regularization
-        self.fc1 = fc_layer(int(n_features_in), 2048)
+        self.fc1 = nn.Linear(int(n_features_in), n_char_class * sequence_length)#fc_layer(int(n_features_in), n_char_class * sequence_length)
         # the final layers:
         # the penultimate layer has no dropout
         # and the final layer is subject to reshaping and transposing to allow for the CTCLoss function
-        self.out = nn.Sequential(nn.Linear(2048, n_char_class * sequence_length),  
-                                 Reshape([sequence_length, n_char_class]), nn.LogSoftmax(dim=2), Transpose([0, 1]))
+        self.out = nn.Sequential(Reshape([sequence_length, n_char_class]), nn.LogSoftmax(dim=2), Transpose([0, 1]))
 
     def forward(self, x):
         """
