@@ -206,6 +206,12 @@ class OCRDataSet(Dataset):
             plt.show()
         return ax_im
 
+    def max_seq_length(self):
+        max_len =  0
+        for pth in self.gt_paths:
+            max_len = max(len(self.line(pth)),  max_len)
+        return max_len
+
 
 class GT4HistOCR(OCRDataSet):
     """
