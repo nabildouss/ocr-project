@@ -180,14 +180,14 @@ class OCRDataSet(Dataset):
         """
         return torch.from_numpy(np.array([self.character_int_map[c] for c in word], dtype=np.int_))
 
-    def embedding_to_word(self, emb):
+    def embedding_to_word(self, emb, blank=0):
         """
         Takes an embedding and decodes it into a string representation
 
         :param emb: sequence of integer values of a word
         :return: string / word representation
         """
-        return ''.join([self.int_chatacter_map[int(i.detach().numpy())] for i in emb])
+        return ''.join([self.int_chatacter_map[int(i.detach().numpy())] for i in emb if i.detach().numpy() != blank])
 
     def display_img(self, idx, show=False, ax=None):
         """

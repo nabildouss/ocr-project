@@ -11,6 +11,7 @@ from src.model import *
 from src.data import *
 import src.milestone1 as ms1
 from src import ctc_decoder
+import tqdm
 
 
 def avg_wer(wer_scores, combined_ref_len):
@@ -234,7 +235,7 @@ class Evaluator:
         dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers,
                              collate_fn=self.dset.batch_transform)
         if self.prog_bar:
-            prog_bar = tqdm.tqdm(total=self.iterations)
+            prog_bar = tqdm.tqdm(total=len(self.dset)//self.s_batch)
         l_wer = []
         l_cer = []
         l_adj_wer = []
