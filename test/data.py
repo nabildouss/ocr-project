@@ -56,5 +56,5 @@ class TestGT4HistOCR(TestCase):
             # checking if encoding and decoding yield same results
             self.assertEqual(word, self.dset.embedding_to_word(self.dset.word_to_embedding(word)))
 
-    def test_max_seq_length(self):
-        print(self.dset.max_seq_length())
+    def test_max_mean_seq_length(self):
+        print(self.dset.max_mean_seq_length())
