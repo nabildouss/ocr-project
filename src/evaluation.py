@@ -10,6 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.model import *
 from src.data import *
 import src.milestone1 as ms1
+from src import ctc_decoder
 
 
 def avg_wer(wer_scores, combined_ref_len):
@@ -201,10 +202,20 @@ def cer(reference, hypothesis, ignore_case=False, remove_space=False):
     return cer
 
 
-def CTC_to_int(P):
-    for p in P:
-        pass
-    pass
+def CTC_to_int(y_TNS):
+    """
+    decodes the probabilities back to the embeddings
+
+    :param y_TNS: log-softmax of shape (T, N, S) just like the Baseline models output
+    :return: estimated embeddings
+    """
+    T = y_TNS.shape[0]
+    embeddings = []
+    for t in range(T):
+        P = y_TNS[:, t, :].detach().numpy()
+        P = np.exp(P)
+        embeddings.append(ctc_decoder.decode(P))
+    return embeddings
 
 
 class Evaluator:
