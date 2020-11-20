@@ -1,5 +1,6 @@
 import numpy as np
 from argparse import ArgumentParser
+import torch
 from torch.utils.data import DataLoader
 import sys
 import os
@@ -250,22 +251,34 @@ def arg_parser():
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
     ap.add_argument('--out', default=None)
+    ap.add_argument('--pth_model', default=None)
     return ap
 
 
-def run_evaluation(data_set, s_batch, device, prog_bar, pth_out):
-    model = BaseLine(n_char_class=len(train.character_classes)+1)
+def run_evaluation(pth_model, data_set, s_batch, device, prog_bar, pth_out):
+    if pth_model is None:
+        raise ValueError('Please submit a path to the model you want to evaluate')
+    # loading the test split
     _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25)
+    # loading the model
+    state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
+    model = BaseLine(n_char_class=len(test.character_classes)+1)
+    model.load_state_dict(state_dict=state_dict)
+    # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
+    # evaluating the model
     wer, adj_wer, cer, adj_cer = evaluator.eval()
+    # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
+    # storing the dictionary as a JSON file
     if not  os.path.isdir(os.path.dirname(pth_out)):
         os.makedirs(os.path.dirname(pth_out))
     with open(pth_out, 'w') as f_out:
         json.dump(summary, f_out)
+    # finally printing the results
     print(summary)
 
 
 if __name__ ==  '__main__':
     ap = arg_parser().parse_args()
-    run_evaluation(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out)
+    run_evaluation(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out)
