@@ -210,12 +210,13 @@ def CTC_to_int(y_TNS):
     :param y_TNS: log-softmax of shape (T, N, S) just like the Baseline models output
     :return: estimated embeddings
     """
-    T = y_TNS.shape[0]
+    N = y_TNS.shape[1]
     embeddings = []
-    for t in range(T):
-        P = y_TNS[:, t, :].detach().numpy()
-        P = np.exp(P)
-        embeddings.append(ctc_decoder.decode(P))
+    for n in range(N):
+        P = y_TNS[:, n, :].detach().cpu().numpy()
+        #P = np.exp(P)
+        emb = ctc_decoder.decode(P)
+        embeddings.append(emb)
     return embeddings
 
 

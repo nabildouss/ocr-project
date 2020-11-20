@@ -1,98 +1,157 @@
+from __future__ import division
+from __future__ import print_function
 import numpy as np
-import math
-import collections
-
-NEG_INF = -float("inf")
+import torch
 
 
-def make_new_beam():
-    fn = lambda: (NEG_INF, NEG_INF)
-    return collections.defaultdict(fn)
+class BeamEntry:
+	"information about one single beam at specific time-step"
+	def __init__(self):
+		self.prTotal = 0 # blank and non-blank
+		self.prNonBlank = 0 # non-blank
+		self.prBlank = 0 # blank
+		self.prText = 1 # LM score
+		self.lmApplied = False # flag if LM was already applied to this beam
+		self.labeling = () # beam-labeling
 
 
-def logsumexp(*args):
-    """
-    Stable log sum exp.
-    """
-    if all(a == NEG_INF for a in args):
-        return NEG_INF
-    a_max = max(args)
-    lsp = math.log(sum(math.exp(a - a_max)
-                       for a in args))
-    return a_max + lsp
+class BeamState:
+	"information about the beams at specific time-step"
+	def __init__(self):
+		self.entries = {}
+
+	def norm(self):
+		"length-normalise LM score"
+		for (k, _) in self.entries.items():
+			labelingLen = len(self.entries[k].labeling)
+			self.entries[k].prText = self.entries[k].prText ** (1.0 / (labelingLen if labelingLen else 1.0))
+
+	def sort(self):
+		"return beam-labelings, sorted by probability"
+		beams = [v for (_, v) in self.entries.items()]
+		sortedBeams = sorted(beams, reverse=True, key=lambda x: x.prTotal*x.prText)
+		return [x.labeling for x in sortedBeams]
 
 
-def decode(probs, beam_size=100, blank=0):
-    """
-    Performs inference for the given output probabilities.
-    Arguments:
-        probs: The output probabilities (e.g. post-softmax) for each
-          time step. Should be an array of shape (time x output dim).
-        beam_size (int): Size of the beam to use during inference.
-        blank (int): Index of the CTC blank label.
-    Returns the output label sequence and the corresponding negative
-    log-likelihood estimated by the decoder.
-    """
-    T, S = probs.shape
-    probs = np.log(probs)
+def applyLM(parentBeam, childBeam, classes, lm):
+	"calculate LM score of child beam by taking score from parent beam and bigram probability of last two chars"
+	if lm and not childBeam.lmApplied:
+		c1 = classes[parentBeam.labeling[-1] if parentBeam.labeling else classes.index(' ')] # first char
+		c2 = classes[childBeam.labeling[-1]] # second char
+		lmFactor = 0.01 # influence of language model
+		bigramProb = lm.getCharBigram(c1, c2) ** lmFactor # probability of seeing first and second char next to each other
+		childBeam.prText = parentBeam.prText * bigramProb # probability of char sequence
+		childBeam.lmApplied = True # only apply LM once per beam entry
 
-    # Elements in the beam are (prefix, (p_blank, p_no_blank))
-    # Initialize the beam with the empty sequence, a probability of
-    # 1 for ending in blank and zero for ending in non-blank
-    # (in log space).
-    beam = [(tuple(), (0.0, NEG_INF))]
 
-    for t in range(T):  # Loop over time
+def addBeam(beamState, labeling):
+	"add beam if it does not yet exist"
+	if labeling not in beamState.entries:
+		beamState.entries[labeling] = BeamEntry()
 
-        # A default dictionary to store the next step candidates.
-        next_beam = make_new_beam()
 
-        for s in range(S):  # Loop over vocab
-            p = probs[t, s]
+def ctcBeamSearch(mat, classes, lm, beamWidth=25, blankIdx=0):
+	"beam search as described by the paper of Hwang et al. and the paper of Graves et al."
 
-            # The variables p_b and p_nb are respectively the
-            # probabilities for the prefix given that it ends in a
-            # blank and does not end in a blank at this time step.
-            for prefix, (p_b, p_nb) in beam:  # Loop over beam
+	maxT, maxC = mat.shape
 
-                # If we propose a blank the prefix doesn't change.
-                # Only the probability of ending in blank gets updated.
-                if s == blank:
-                    n_p_b, n_p_nb = next_beam[prefix]
-                    n_p_b = logsumexp(n_p_b, p_b + p, p_nb + p)
-                    next_beam[prefix] = (n_p_b, n_p_nb)
-                    continue
+	# initialise beam state
+	last = BeamState()
+	labeling = ()
+	last.entries[labeling] = BeamEntry()
+	last.entries[labeling].prBlank = 1
+	last.entries[labeling].prTotal = 1
 
-                # Extend the prefix by the new character s and add it to
-                # the beam. Only the probability of not ending in blank
-                # gets updated.
-                end_t = prefix[-1] if prefix else None
-                n_prefix = prefix + (s,)
-                n_p_b, n_p_nb = next_beam[n_prefix]
-                if s != end_t:
-                    n_p_nb = logsumexp(n_p_nb, p_b + p, p_nb + p)
-                else:
-                    # We don't include the previous probability of not ending
-                    # in blank (p_nb) if s is repeated at the end. The CTC
-                    # algorithm merges characters not separated by a blank.
-                    n_p_nb = logsumexp(n_p_nb, p_b + p)
+	# go over all time-steps
+	for t in range(maxT):
+		curr = BeamState()
 
-                # *NB* this would be a good place to include an LM score.
-                next_beam[n_prefix] = (n_p_b, n_p_nb)
+		# get beam-labelings of best beams
+		bestLabelings = last.sort()[0:beamWidth]
 
-                # If s is repeated at the end we also update the unchanged
-                # prefix. This is the merging case.
-                if s == end_t:
-                    n_p_b, n_p_nb = next_beam[prefix]
-                    n_p_nb = logsumexp(n_p_nb, p_nb + p)
-                    next_beam[prefix] = (n_p_b, n_p_nb)
+		# go over best beams
+		for labeling in bestLabelings:
 
-        # Sort and trim the beam before moving on to the
-        # next time-step.
-        beam = sorted(next_beam.items(),
-                      key=lambda x: logsumexp(*x[1]),
-                      reverse=True)
-        beam = beam[:beam_size]
+			# probability of paths ending with a non-blank
+			prNonBlank = 0
+			# in case of non-empty beam
+			if labeling:
+				# probability of paths with repeated last char at the end
+				prNonBlank = last.entries[labeling].prNonBlank * mat[t, labeling[-1]]
 
-    best = beam[0]
-    return best[0], -logsumexp(*best[1])
+			# probability of paths ending with a blank
+			prBlank = (last.entries[labeling].prTotal) * mat[t, blankIdx]
+
+			# add beam at current time-step if needed
+			addBeam(curr, labeling)
+
+			# fill in data
+			curr.entries[labeling].labeling = labeling
+			curr.entries[labeling].prNonBlank += prNonBlank
+			curr.entries[labeling].prBlank += prBlank
+			curr.entries[labeling].prTotal += prBlank + prNonBlank
+			curr.entries[labeling].prText = last.entries[labeling].prText # beam-labeling not changed, therefore also LM score unchanged from
+			curr.entries[labeling].lmApplied = True # LM already applied at previous time-step for this beam-labeling
+
+			# extend current beam-labeling
+			for c in range(maxC - 1):
+				# add new char to current beam-labeling
+				newLabeling = labeling + (c,)
+
+				# if new labeling contains duplicate char at the end, only consider paths ending with a blank
+				if labeling and labeling[-1] == c:
+					prNonBlank = mat[t, c] * last.entries[labeling].prBlank
+				else:
+					prNonBlank = mat[t, c] * last.entries[labeling].prTotal
+
+				# add beam at current time-step if needed
+				addBeam(curr, newLabeling)
+				
+				# fill in data
+				curr.entries[newLabeling].labeling = newLabeling
+				curr.entries[newLabeling].prNonBlank += prNonBlank
+				curr.entries[newLabeling].prTotal += prNonBlank
+				
+				# apply LM
+				applyLM(curr.entries[labeling], curr.entries[newLabeling], classes, lm)
+
+		# set new beam state
+		last = curr
+
+	# normalise LM scores according to beam-labeling-length
+	last.norm()
+
+	 # sort by probability
+	bestLabeling = last.sort()[0] # get most probable labeling
+
+	# map labels to chars
+	res = []#''
+	for l in bestLabeling:
+		res += classes[l]
+
+	return res
+
+
+def decode(hypothesis, blank=0, lm=None):
+    return greedy_decode(hypothesis, blank=blank)
+    #return np.array(ctcBeamSearch(hypothesis, [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)).flatten()
+
+
+def greedy_decode(hypothesis, blank=0):
+    maxs = np.zeros(hypothesis.shape[0])
+    for t, P in enumerate(hypothesis):
+        maxs [t] = np.argmax(P)
+    results = []
+    accept = True
+    current = -1
+    for t in range(hypothesis.shape[0]):
+        if maxs[t] != current:
+            accept = True
+        else:
+            accept = False
+        if accept and maxs[t] != blank:
+            results.append(maxs[t])
+        current = maxs[t]
+    return torch.from_numpy(np.array(results))
+
+
