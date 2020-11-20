@@ -1,4 +1,14 @@
 import numpy as np
+from argparse import ArgumentParser
+from torch.utils.data import DataLoader
+import sys
+import os
+import json
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from src.model import *
+from src.data import *
+import src.milestone1 as ms1
 
 
 def avg_wer(wer_scores, combined_ref_len):
@@ -188,3 +198,74 @@ def cer(reference, hypothesis, ignore_case=False, remove_space=False):
 
     cer = float(edit_distance) / ref_len
     return cer
+
+
+def CTC_to_int(P):
+    for p in P:
+        pass
+    pass
+
+
+class Evaluator:
+
+    def __init__(self, model, dset, device, s_batch=16, prog_bar=True):
+        self.model = model
+        self.dset = dset
+        self.device = device
+        self.s_batch = s_batch
+        self.prog_bar = prog_bar
+
+    def eval(self):
+        self.model.eval()
+        self.model.to(self.device)
+        dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers,
+                             collate_fn=self.dset.batch_transform)
+        if self.prog_bar:
+            prog_bar = tqdm.tqdm(total=self.iterations)
+        l_wer = []
+        l_cer = []
+        l_adj_wer = []
+        l_adj_cer = []
+        for batch, targets, l_targets in dloader:
+            # moving the data to the (GPU-) device
+            batch, targets = batch.to(self.device), targets.to(self.device)
+            # forward pass
+            y = self.model(batch)
+            hypotheses = CTC_to_int(y)
+            for h, r in zip(hypotheses, targets.cpu()):
+                hyp, ref = map(self.dset.embedding_to_word, [h, r])
+                l_wer.append(wer(ref, hyp))
+                l_cer.append(cer(ref, hyp))
+                l_adj_wer.append(adjusted_cer(ref, hyp))
+                l_adj_cer.append(adjusted_cer(ref, hyp))
+            if self.prog_bar:
+                prog_bar.update(1)
+        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer])
+
+
+def arg_parser():
+    ap = ArgumentParser()
+    ap.add_argument('--data_set', default='GT4HistOCR', type=str)
+    ap.add_argument('--batch_size', default=16, type=int)
+    ap.add_argument('--device', default='cpu', type=str)
+    ap.add_argument('--prog_bar', default=True, type=bool)
+    ap.add_argument('--out', default=None)
+    return ap
+
+
+def run_evaluation(data_set, s_batch, device, prog_bar, pth_out):
+    model = BaseLine(n_char_class=len(train.character_classes)+1)
+    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25)
+    evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
+    wer, adj_wer, cer, adj_cer = evaluator.eval()
+    summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
+    if not  os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    with open(pth_out, 'w') as f_out:
+        json.dump(summary, f_out)
+    print(summary)
+
+
+if __name__ ==  '__main__':
+    ap = arg_parser().parse_args()
+    run_evaluation(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out)
