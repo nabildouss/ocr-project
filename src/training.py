@@ -26,10 +26,12 @@ class Trainer:
         self.prog_bar = prog_bar
 
     def crierion(self):
-        return torch.nn.CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
+        #return torch.nn.CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
+        return torch.nn.L1Loss()#MSELoss()#CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
         return torch.optim.Adam(self.model.parameters(), lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
+        #return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
         #return torch.optim.SGD(self.model.parameters(),  lr=0.001, momentum=0.9)#
 
     def train(self):
@@ -44,18 +46,32 @@ class Trainer:
         it_count = 0
         L_IN = [int(self.model.sequence_length) for _ in range(self.s_batch)]
         epoch_count = 1
-        last10loss = np.zeros(10)
+        last10loss = np.zeros(50)
         while it_count < self.iterations:
             # new data loader required after each epoch
             dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
                                  collate_fn=self.dset.batch_transform)
             for batch, targets, l_targets in dloader:
                 # moving the data to the (GPU-) device
-                batch, targets = batch.to(self.device), targets.to(self.device)
+                #batch, targets = batch.to(self.device), targets.to(self.device)
                 # forward pass
+                s_lens = 0
+                embds = []
+                for img, len_t in zip(batch, l_targets):
+                    target = targets[s_lens:s_lens+len_t]
+                    space_char = int(self.model.sequence_length / len_t)
+                    embeddings = torch.zeros([self.model.sequence_length, self.model.n_char_class])
+                    for i in range(len(target)):
+                        embeddings[i*space_char:i*space_char+space_char, target[i]] = 1
+                        embeddings[(len(target)-1)*space_char:, target[-1]] = 1
+                    embds.append(embeddings)
+                    s_lens += len_t
+                embds = torch.stack(embds)
+                batch, embds = batch.to(self.device), embds.to(self.device)
                 y = self.model(batch)
                 # computing loss and gradients
-                loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
+                #loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
+                loss = criterion(y, embds)
                 if torch.isnan(loss).item():
                     raise ValueError(f"probs: {y.shape} | targets: {targets.shape}")
                 loss.backward()
@@ -82,7 +98,7 @@ def arg_parser():
     ap = ArgumentParser()
     ap.add_argument('--iterations', default=int(1e5), type=int)
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
-    ap.add_argument('--batch_size', default=16, type=int)
+    ap.add_argument('--batch_size', default=20, type=int)
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
     ap.add_argument('--out', default=None)

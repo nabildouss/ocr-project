@@ -60,7 +60,7 @@ class OCRDataSet(Dataset):
     This class shall be used as a base class for datasets dealing with OCR.
     """
 
-    def __init__(self, img_paths, gt_paths, f_split=None, transformation=ToTensor(), alphabet=None):
+    def __init__(self, img_paths, gt_paths, f_split=None, transformation=ToTensor(), alphabet=None, invert=True):
         """
         :param img_paths: paths of all images
         :param gt_paths: paths to respective line transcriptions
@@ -68,6 +68,7 @@ class OCRDataSet(Dataset):
         :param img_shape: desired shape of images, if None no resizing takes place
         """
         super().__init__()
+        self.invert = invert
         self.img_paths = np.array(img_paths)
         self.gt_paths = np.array(gt_paths)
         # sorting to make splits deterministic
@@ -113,6 +114,8 @@ class OCRDataSet(Dataset):
         # normalizae lighting
         tensor -=  tensor.min()
         tensor /=  tensor.max()
+        if self.invert:
+            tensor = 1-tensor
         return tensor
 
     def grayscale(self, x):
@@ -169,7 +172,8 @@ class OCRDataSet(Dataset):
             # keeping track of ooriginal lengths
             l_targets.append(len(transcript))
         # Tensor conversion for batch and targets, the lengths can stay as a list
-        return torch.stack(batch), torch.nn.utils.rnn.pad_sequence(targets, batch_first=True), l_targets
+        #return torch.stack(batch), torch.nn.utils.rnn.pad_sequence(targets, batch_first=True), l_targets
+        return torch.stack(batch), torch.cat(targets), l_targets
 
     def word_to_embedding(self, word):
         """

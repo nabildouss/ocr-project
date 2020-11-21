@@ -77,12 +77,14 @@ class BaseLine(nn.Module):
 
     def forward(self, batch):
         y = []
+        s_windows = []
         for img in batch:
-            s_windows = self.sliding_window.sliding_windows(img)
-            P = self.model(s_windows)
-            y.append(P)
-        y = torch.stack(y) # N, T, C
-        return y.transpose(1, 0) # T, N, C
+            s_windows.append(self.sliding_window.sliding_windows(img))
+        s_windows = torch.cat(s_windows)
+        P = self.model(s_windows)
+        y = P.view(batch.shape[0], self.sequence_length, self.n_char_class)
+        return y
+        #return y.transpose(1, 0) # T, N, C
 
 
 class CharHistCNN(nn.Module):
@@ -102,20 +104,20 @@ class CharHistCNN(nn.Module):
         in_channels, h, w = shape_in
         # a generic definition of convolution layers, all layers shall have the same activation and batch normalization
         conv_layer = lambda c_in, c_out: nn.Sequential(nn.Conv2d(kernel_size=3, in_channels=c_in, out_channels=c_out,
-                                                                 padding=1), nn.ReLU())
+                                                                 padding=1), nn.LeakyReLU())
         # a generic definition of fully connected layers, all layers shall have the same activatin
-        fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.ReLU())
+        fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.LeakyReLU())
 
         # -------------------------------------------the CNN architecture-------------------------------------------
         # first phase: operating on the original image, no more than 64 channels
-        self.conv1 = nn.Sequential(conv_layer(in_channels, 16),
-                                   conv_layer(16, 16))
+        self.conv1 = nn.Sequential(conv_layer(in_channels, 8),
+                                   conv_layer(8, 8))
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Sequential(conv_layer(16, 32),
-                                   conv_layer(32, 32))
+        self.conv2 = nn.Sequential(conv_layer(8, 16),
+                                   conv_layer(16, 16))
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv3 = nn.Sequential(conv_layer(32, 64),
-                                   conv_layer(64, 64))
+        self.conv3 = nn.Sequential(conv_layer(16, 32),
+                                   conv_layer(32, 32))
 
         # --------------------------------the probability prediction--------------------------------------
         stride_prod = self.pool1.stride * self.pool2.stride
@@ -123,11 +125,11 @@ class CharHistCNN(nn.Module):
             raise ValueError(f'culd not initialize model: image width and height aught to be divisible by {stride_prod}')
         f_scale = 1/stride_prod
         s_fmap = int(shape_in[1] * f_scale * shape_in[2] * f_scale)
-        self.fc1 = nn.Sequential(fc_layer(64 * s_fmap, 1024),
+        self.fc1 = nn.Sequential(fc_layer(32* s_fmap, 1024),
                                  fc_layer(1024, 1024), nn.Dropout(0.5),
                                  fc_layer(1024, 1024), nn.Dropout(0.5))
         self.out = nn.Sequential(fc_layer(1024, 1024),
-                                 nn.Linear(1024, n_char_class), nn.LogSoftmax())
+                                 nn.Linear(1024, n_char_class), nn.Softmax(dim=1))
 
     def forward(self, x):
         """

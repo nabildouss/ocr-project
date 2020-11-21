@@ -241,27 +241,34 @@ class Evaluator:
         l_cer = []
         l_adj_wer = []
         l_adj_cer = []
+        it_count = 0
         for batch, targets, l_targets in dloader:
             # moving the data to the (GPU-) device
             batch, targets = batch.to(self.device), targets.to(self.device)
             # forward pass
             y = self.model(batch)
+            print(y)
+            raise
             hypotheses = CTC_to_int(y)
             for h, r in zip(hypotheses, targets.cpu()):
                 hyp, ref = map(self.dset.embedding_to_word, [h, r])
+                print(f'hyp: {hyp}\nref: {ref}\n')
                 l_wer.append(wer(ref, hyp))
                 l_cer.append(cer(ref, hyp))
                 l_adj_wer.append(adjusted_cer(ref, hyp))
                 l_adj_cer.append(adjusted_cer(ref, hyp))
             if self.prog_bar:
                 prog_bar.update(1)
+            it_count += 1
+            if it_count > 500:
+                break
         return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer])
 
 
 def arg_parser():
     ap = ArgumentParser()
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
-    ap.add_argument('--batch_size', default=16, type=int)
+    ap.add_argument('--batch_size', default=4, type=int)
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
     ap.add_argument('--out', default=None)
@@ -272,11 +279,14 @@ def arg_parser():
 def run_evaluation(pth_model, data_set, s_batch, device, prog_bar, pth_out):
     if pth_model is None:
         raise ValueError('Please submit a path to the model you want to evaluate')
+    seq_len = 150
     # loading the test split
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25)
+    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                            transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
     # loading the model
     state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
-    model = BaseLine(n_char_class=len(test.character_classes)+1)
+    model = BaseLine(n_char_class=len(test.character_classes)+1, sequence_length=seq_len,
+                     shape_in=(1, 32, 3*32))
     model.load_state_dict(state_dict=state_dict)
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
