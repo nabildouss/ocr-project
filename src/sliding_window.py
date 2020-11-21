@@ -20,10 +20,10 @@ class SlidingWindow:
         for i in range(self.seq_len):
             if i == 0:
                 w = torch.cat([*splits[:3]], dim=2)
-            elif i == self.seq_len-1:
+            elif i >= self.seq_len-3:
                 w = torch.cat([*splits[-3:]], dim=2)
             else:
-                w = torch.cat([*splits[i-1:i+2]], dim=2)
+                w = torch.cat([*splits[i:i+3]], dim=2)
             windows.append(w)
         return torch.stack(windows)
 

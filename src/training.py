@@ -63,7 +63,7 @@ class Trainer:
                     embeddings = torch.zeros([self.model.sequence_length, self.model.n_char_class])
                     for i in range(len(target)):
                         embeddings[i*space_char:i*space_char+space_char, target[i]] = 1
-                        embeddings[(len(target)-1)*space_char:, target[-1]] = 1
+                    embeddings[(len(target)-1)*space_char:, target[-1]] = 1
                     embds.append(embeddings)
                     s_lens += len_t
                 embds = torch.stack(embds)
@@ -105,7 +105,7 @@ def arg_parser():
     return ap
 
 
-def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=150):
+def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256):
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
                              transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
     model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,

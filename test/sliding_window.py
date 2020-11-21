@@ -8,19 +8,30 @@ from src import sliding_window
 import matplotlib.pyplot as plt
 from torchvision.transforms  import Compose, Resize, ToTensor
 import torch
+import numpy as np
 
 
 class TestSlidingWindow(TestCase):
 
     def setUp(self):
-        seq_len = 150
+        self.seq_len = 256
         self.dset = GT4HistOCR(os.path.join('..', 'corpus'),
-                               transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
-        self.sliding_w = sliding_window.SlidingWindow(seq_len=seq_len)
+                               transformation=Compose([Resize([32, 32*self.seq_len]), ToTensor()]))
+        self.sliding_w = sliding_window.SlidingWindow(seq_len=self.seq_len)
 
     def test_split_img(self):
-        img, _ = self.dset[42]
+        img, transcript = self.dset[42]
         sliding_windows = self.sliding_w.sliding_windows(img)
-        for w in sliding_windows:
-            plt.imshow(w.numpy()[0], cmap='bone')
+        char_width = int(self.seq_len/len(transcript))
+        chars = np.empty(self.seq_len, dtype=str)
+        for k in range(len(transcript)):
+            print(transcript[k])
+            chars[k*char_width:k*char_width+char_width] = transcript[k]
+        i = 0
+        for w in sliding_windows[:15]:
+            f, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.imshow(w.numpy()[0], cmap='bone')
+            ax2.text(0, 0, chars[i], fontsize=128)
             plt.show()
+            plt.close(f)
+            i += 1
