@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from src.sliding_window import SlidingWindow
 
 
 class Reshape(nn.Module):
@@ -61,7 +62,30 @@ class BaseLine(nn.Module):
     The output is reshaped and transposed to fit PyTorch's CTCLoss function.
     """
 
-    def __init__(self, shape_in=(1, 64, 512), n_char_class=100, sequence_length=256, dropout=0.1):
+    def __init__(self, shape_in=(1, 32, 3*32), n_char_class=100, sequence_length=256, dropout=0.1):
+        """
+        :param shape_in: shape of the input images
+        :param n_char_class: number of character classes (required as we calculate the prob. for CTC)
+        :param sequence_length: maximum length of a sequence(/ line)
+        """
+        super().__init__()
+        # model used to estimate log-pobs of a sequence step
+        self.model = CharHistCNN(shape_in, n_char_class, sequence_length)
+        self.sliding_window = SlidingWindow(seq_len=sequence_length)
+
+    def forward(self, batch):
+        y = []
+        for img in batch:
+            s_windows = self.sliding_window.sliding_windows(img)
+            P = self.model(s_windows)
+            y.append(P)
+        y = torch.stack(y) # N, T, C
+        return y.transpose(1, 0) # T, N, C
+
+
+class CharHistCNN(nn.Module):
+
+    def __init__(self, shape_in=(1, 32, 3*32), n_char_class=100, sequence_length=256, dropout=0.1):
         """
         :param shape_in: shape of the input images
         :param n_char_class: number of character classes (required as we calculate the prob. for CTC)
@@ -76,7 +100,7 @@ class BaseLine(nn.Module):
         in_channels, h, w = shape_in
         # a generic definition of convolution layers, all layers shall have the same activation and batch normalization
         conv_layer = lambda c_in, c_out: nn.Sequential(nn.Conv2d(kernel_size=3, in_channels=c_in, out_channels=c_out,
-                                                                 padding=1), nn.ReLU())#, nn.Dropout(dropout))
+                                                                 padding=1), nn.ReLU())
         # a generic definition of fully connected layers, all layers shall have the same activatin
         fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.ReLU())
 
@@ -85,16 +109,23 @@ class BaseLine(nn.Module):
         self.conv1 = nn.Sequential(conv_layer(in_channels, 16),
                                    conv_layer(16, 16))
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # second phase: column pooling, extracting features w.r.t. time
-        self.conv2 = nn.Sequential(conv_layer(16, 16),
-                                   conv_layer(16, 16))
-        self.pool2 = ColumnPooling(shape_in=(shape_in[1]/self.pool1.stride, shape_in[2]/self.pool1.stride), stride=1)
-        # third phase: finally, after have pooled twice, we allow the CNN to be even deeper and have 256 feature maps
+        self.conv2 = nn.Sequential(conv_layer(16, 32),
+                                   conv_layer(32, 32))
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv3 = nn.Sequential(conv_layer(32, 64),
+                                   conv_layer(64, 64))
 
         # --------------------------------the probability prediction--------------------------------------
-        self.lstm = nn.Sequential(Reshape([16, int(shape_in[2]/self.pool1.stride)]), Transpose([2,1]),
-                                  nn.LSTM(input_size=16, hidden_size=n_char_class, num_layers=10, batch_first=True))
-        self.out = nn.Sequential(nn.LogSoftmax(dim=2), Transpose([0, 1]))  #Reshape([sequence_length, n_char_class]), 
+        stride_prod = self.pool1.stride * self.pool2.stride
+        if shape_in[1] % stride_prod != 0 or shape_in[2] % stride_prod != 0:
+            raise ValueError(f'culd not initialize model: image width and height aught to be divisible by {stride_prod}')
+        f_scale = 1/stride_prod
+        s_fmap = int(shape_in[1] * f_scale * shape_in[2] * f_scale)
+        self.fc1 = nn.Sequential(fc_layer(64 * s_fmap, 1024),
+                                 fc_layer(1024, 1024), nn.Dropout(0.5),
+                                 fc_layer(1024, 1024), nn.Dropout(0.5))
+        self.out = nn.Sequential(fc_layer(1024, 1024),
+                                 nn.Linear(1024, n_char_class), nn.LogSoftmax())
 
     def forward(self, x):
         """
@@ -108,5 +139,7 @@ class BaseLine(nn.Module):
         y = self.pool1(y)
         y = self.conv2(y)
         y = self.pool2(y)
-        y, _ = self.lstm(y)
+        y = self.conv3(y)
+        y = torch.flatten(y, start_dim=1)
+        y = self.fc1(y)
         return self.out(y)
