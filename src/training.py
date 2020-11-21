@@ -9,6 +9,7 @@ import src.milestone1 as ms1
 import torch
 from torch.utils.data import DataLoader
 import tqdm
+from torchvision.transforms  import Compose, Resize, ToTensor
 
 
 class Trainer:
@@ -83,9 +84,11 @@ def arg_parser():
     return ap
 
 
-def run_training(iterations, data_set, batch_size, device, out, prog_bar):
-    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25)
-    model = BaseLine(n_char_class=len(train.character_classes)+1)
+def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=150):
+    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                             transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
+    model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
+                     shape_in=(1, 32, 3*32))
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
                       prog_bar=prog_bar)
     trainer.train()

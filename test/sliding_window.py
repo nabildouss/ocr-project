@@ -14,7 +14,8 @@ class TestSlidingWindow(TestCase):
 
     def setUp(self):
         seq_len = 150
-        self.dset = GT4HistOCR(os.path.join('..', 'corpus'),transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
+        self.dset = GT4HistOCR(os.path.join('..', 'corpus'),
+                               transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
         self.sliding_w = sliding_window.SlidingWindow(seq_len=seq_len)
 
     def test_split_img(self):
