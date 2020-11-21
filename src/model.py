@@ -69,6 +69,8 @@ class BaseLine(nn.Module):
         :param sequence_length: maximum length of a sequence(/ line)
         """
         super().__init__()
+        self.sequence_length = sequence_length
+        self.n_char_class = n_char_class
         # model used to estimate log-pobs of a sequence step
         self.model = CharHistCNN(shape_in, n_char_class, sequence_length)
         self.sliding_window = SlidingWindow(seq_len=sequence_length)
