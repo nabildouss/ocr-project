@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 import tqdm
 from torchvision.transforms  import Compose, Resize, ToTensor
+import numpy as np
 
 
 class Trainer:
@@ -43,6 +44,7 @@ class Trainer:
         it_count = 0
         L_IN = [int(self.model.sequence_length) for _ in range(self.s_batch)]
         epoch_count = 1
+        last10loss = np.zeros(10)
         while it_count < self.iterations:
             # new data loader required after each epoch
             dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
@@ -65,7 +67,10 @@ class Trainer:
                     break
                 if self.prog_bar:
                     prog_bar.update(1)
-                    prog_bar.set_description("epoch %d | mean loss = %f" % (epoch_count, loss / self.s_batch))
+                    last10loss = np.roll(last10loss, 1)
+                    last10loss[0] = loss.item()
+                    mean_loss = np.mean(last10loss)
+                    prog_bar.set_description("epoch %d | mean loss = %f" % (epoch_count, mean_loss / self.s_batch))
             epoch_count += 1
         # moving clearing the GPU memory
         batch.cpu()
