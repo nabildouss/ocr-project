@@ -52,29 +52,40 @@ class Trainer:
             dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
                                  collate_fn=self.dset.batch_transform)
             for batch, targets, l_targets in dloader:
-                # moving the data to the (GPU-) device
-                #batch, targets = batch.to(self.device), targets.to(self.device)
-                # forward pass
                 s_lens = 0
                 embds = []
                 for img, len_t in zip(batch, l_targets):
-                    target = targets[s_lens:s_lens+len_t]
-                    space_char = int(self.model.sequence_length / len_t)
-                    embeddings = torch.zeros([self.model.sequence_length, self.model.n_char_class])
-                    for i in range(len(target)):
-                        embeddings[i*space_char:i*space_char+space_char, target[i]] = 1
-                    embeddings[(len(target)-1)*space_char:, target[-1]] = 1
-                    embds.append(embeddings)
+                    tgt = targets[s_lens:s_lens+len_t]
+                    one_hot = torch.zeros([len(targets), self.model.n_char_class])
+                    for t in tgt:
+                        one_hot[t] = 1
+                    embds.append(one_hot)
+                    #space_char = int(self.model.sequence_length / len_t)
+                    #embeddings = torch.zeros([self.model.sequence_length, self.model.n_char_class])
+                    #for i in range(len(target)):
+                    #    embeddings[i*space_char:i*space_char+space_char, target[i]] = 1
+                    #embeddings[(len(target)-1)*space_char:, target[-1]] = 1
+                    #embds.append(embeddings)
                     s_lens += len_t
-                embds = torch.stack(embds)
-                batch, embds = batch.to(self.device), embds.to(self.device)
+                # forward pass
+                batch = batch.to(self.device)
                 y = self.model(batch)
+                # loss and backprop
+                for i, encodings in enumerate(y):
+                    l_transcript = min(len(encodings), len(embds[i]))
+                    loss = criterion(encodings[:l_transcript], embds[:l_transcript])
+                    if torch.isnan(loss).item():
+                        raise ValueError(f"probs: {y.shape} | targets: {targets.shape}")
+                    loss.backward()
+                #for img, emb in zip(batch, embds):
+                #    y = self.model()
+                #embds = torch.stack(embds)
+                #batch, embds = batch.to(self.device), embds.to(self.device)
+                #y = self.model(batch)
                 # computing loss and gradients
                 #loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
-                loss = criterion(y, embds)
-                if torch.isnan(loss).item():
-                    raise ValueError(f"probs: {y.shape} | targets: {targets.shape}")
-                loss.backward()
+                #loss = criterion(y, embds)
+                #loss.backward()t
                 # optimization step
                 optimizer.step()
                 # finally increasing the optimization step counter

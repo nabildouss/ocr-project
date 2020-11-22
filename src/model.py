@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from src.sliding_window import SlidingWindow
+from src.sliding_window import SlidingWindow, AutomaticWindow
 
 
 class Reshape(nn.Module):
@@ -73,17 +73,23 @@ class BaseLine(nn.Module):
         self.n_char_class = n_char_class
         # model used to estimate log-pobs of a sequence step
         self.model = CharHistCNN(shape_in, n_char_class, sequence_length)
-        self.sliding_window = SlidingWindow(seq_len=sequence_length)
+        self.sliding_window = AutomaticWindow(window_size=shape_in[1:])
 
     def forward(self, batch):
         y = []
-        s_windows = []
         for img in batch:
-            s_windows.append(self.sliding_window.sliding_windows(img))
-        s_windows = torch.cat(s_windows)
-        P = self.model(s_windows)
-        y = P.view(batch.shape[0], self.sequence_length, self.n_char_class)
+            windows = self.sliding_window.sliding_windows(img)
+            out = self.model(windows)
+            y.append(out)
         return y
+        #y = []
+        #s_windows = []
+        #for img in batch:
+        #    s_windows.append(self.sliding_window.sliding_windows(img))
+        #s_windows = torch.cat(s_windows)
+        #P = self.model(s_windows)
+        #y = P.view(batch.shape[0], self.sequence_length, self.n_char_class)
+        #return y
         #return y.transpose(1, 0) # T, N, C
 
 
