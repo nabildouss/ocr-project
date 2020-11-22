@@ -135,7 +135,7 @@ class CharHistCNN(nn.Module):
                                  fc_layer(1024, 1024), nn.Dropout(0.5),
                                  fc_layer(1024, 1024), nn.Dropout(0.5))
         self.out = nn.Sequential(fc_layer(1024, 1024),
-                                 nn.Linear(1024, n_char_class), nn.Softmax(dim=1))
+                                 nn.Linear(1024, n_char_class), nn.Softmax(dim=1))#nn.Sigmoid())#
 
     def forward(self, x):
         """

@@ -244,13 +244,19 @@ class Evaluator:
         it_count = 0
         for batch, targets, l_targets in dloader:
             # moving the data to the (GPU-) device
-            batch, targets = batch.to(self.device), targets.to(self.device)
+            batch = batch.to(self.device)
+            gt = []
+            sum_len = 0
+            for l_seq in l_targets: 
+                gt.append(targets[sum_len:sum_len+l_seq])
+                sum_len += l_seq
             # forward pass
             y = self.model(batch)
-            print(y)
-            raise
-            hypotheses = CTC_to_int(y)
-            for h, r in zip(hypotheses, targets.cpu()):
+            #hypotheses = CTC_to_int(y)
+            hypotheses = []
+            for P in y:
+                hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
+            for h, r in zip(hypotheses, gt):
                 hyp, ref = map(self.dset.embedding_to_word, [h, r])
                 print(f'hyp: {hyp}\nref: {ref}\n')
                 l_wer.append(wer(ref, hyp))
@@ -279,7 +285,7 @@ def arg_parser():
 def run_evaluation(pth_model, data_set, s_batch, device, prog_bar, pth_out):
     if pth_model is None:
         raise ValueError('Please submit a path to the model you want to evaluate')
-    seq_len = 150
+    seq_len = 256
     # loading the test split
     _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
                             transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
