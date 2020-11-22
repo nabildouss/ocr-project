@@ -118,9 +118,9 @@ def arg_parser():
 
 def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256):
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
+                             transformation=Compose([ToTensor()]))
     model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
-                     shape_in=(1, 32, 3*32))
+                     shape_in=(1, 32, 32))
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
                       prog_bar=prog_bar)
     trainer.train()
