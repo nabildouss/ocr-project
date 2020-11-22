@@ -73,7 +73,7 @@ class BaseLine(nn.Module):
         self.n_char_class = n_char_class
         # model used to estimate log-pobs of a sequence step
         self.model = CharHistCNN(shape_in, n_char_class, sequence_length)
-        self.sliding_window = SlidingWindow(window_size=shape_in[1:])
+        self.sliding_window = SlidingWindow(seq_len=self.sequence_length)
 
     def forward(self, batch):
         s_windows = []
