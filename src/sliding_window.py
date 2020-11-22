@@ -56,7 +56,7 @@ class AutomaticWindow:
         windows = []
         for s in splits:
             windows.append(img[:, :, s[0]:s[1]])
-        return self.resize(torch.stack(windows))
+        return torch.stack([self.resize(w) for w in windows])
 
     def __clean_up_overlaps(self, splits, img=None):
         # helper functions

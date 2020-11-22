@@ -57,8 +57,8 @@ class Trainer:
                 for img, len_t in zip(batch, l_targets):
                     tgt = targets[s_lens:s_lens+len_t]
                     one_hot = torch.zeros([len(targets), self.model.n_char_class])
-                    for t in tgt:
-                        one_hot[t] = 1
+                    for i, t in enumerate(tgt):
+                        one_hot[i, t] = 1
                     embds.append(one_hot)
                     #space_char = int(self.model.sequence_length / len_t)
                     #embeddings = torch.zeros([self.model.sequence_length, self.model.n_char_class])
@@ -118,7 +118,7 @@ def arg_parser():
 
 def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256):
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([ToTensor()]))
+                             transformation=Compose([Resize([32,3000]), ToTensor()]))
     model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
                      shape_in=(1, 32, 32))
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
