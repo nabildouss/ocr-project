@@ -73,7 +73,8 @@ class Trainer:
                 # loss and backprop
                 for i, encodings in enumerate(y):
                     l_transcript = min(len(encodings), len(embds[i]))
-                    loss = criterion(encodings[:l_transcript], embds[:l_transcript])
+                    gt = embds[i][:l_transcript].to(self.device)
+                    loss = criterion(encodings[:l_transcript], gt)
                     if torch.isnan(loss).item():
                         raise ValueError(f"probs: {y.shape} | targets: {targets.shape}")
                     loss.backward()
