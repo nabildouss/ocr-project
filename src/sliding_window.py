@@ -18,16 +18,16 @@ class SlidingWindow:
         stride = int(img.shape[2] / self.seq_len)
         return torch.stack([img[:, :, c*stride:c*stride+stride] for c in range(self.seq_len)])
 
-    def sliding_windows(self, img):
+    def sliding_windows(self, img, n_windows=4):
         splits = self.split_img(img)
         windows = []
         for i in range(self.seq_len):
             if i == 0:
-                w = torch.cat([*splits[:3]], dim=2)
-            elif i >= self.seq_len-3:
-                w = torch.cat([*splits[-3:]], dim=2)
+                w = torch.cat([*splits[:n_windows]], dim=2)
+            elif i >= self.seq_len-n_windows:
+                w = torch.cat([*splits[-n_windows:]], dim=2)
             else:
-                w = torch.cat([*splits[i:i+3]], dim=2)
+                w = torch.cat([*splits[i:i+n_windows]], dim=2)
             windows.append(w)
         return torch.stack(windows)
 
