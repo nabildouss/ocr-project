@@ -149,7 +149,7 @@ def greedy_decode(hypothesis, blank=0):
             accept = True
         else:
             accept = False
-        if accept and maxs[t] != blank:
+        if accept:# and maxs[t] != blank:
             results.append(maxs[t])
         current = maxs[t]
     return torch.from_numpy(np.array(results))

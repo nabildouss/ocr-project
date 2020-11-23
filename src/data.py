@@ -191,7 +191,10 @@ class OCRDataSet(Dataset):
         :param emb: sequence of integer values of a word
         :return: string / word representation
         """
-        return ''.join([self.int_chatacter_map[int(i.detach().numpy())] for i in emb if i.detach().numpy() != blank])
+        to_chars = [self.int_chatacter_map[int(i.detach().numpy())] for i in emb if i.detach().numpy() != blank]
+        if to_chars == []:
+            return ''
+        return ''.join(to_chars)
 
     def display_img(self, idx, show=False, ax=None):
         """

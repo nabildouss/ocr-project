@@ -82,7 +82,8 @@ class BaseLine(nn.Module):
         s_windows = torch.cat(s_windows)
         P = self.model(s_windows)
         y = P.view(batch.shape[0], self.sequence_length, self.n_char_class)
-        return y.transpose(1, 0) # T, N, C
+        y = y.transpose(1, 0) # T, N, C
+        return y
 
 
 class CharHistCNN(nn.Module):
@@ -102,7 +103,9 @@ class CharHistCNN(nn.Module):
         in_channels, h, w = shape_in
         # a generic definition of convolution layers, all layers shall have the same activation and batch normalization
         conv_layer = lambda c_in, c_out: nn.Sequential(nn.Conv2d(kernel_size=3, in_channels=c_in, out_channels=c_out,
-                                                                 padding=1), nn.LeakyReLU())
+                                                                 padding=1), 
+                                                       nn.LeakyReLU(), 
+                                                       nn.BatchNorm2d(c_out))
         # a generic definition of fully connected layers, all layers shall have the same activatin
         fc_layer = lambda c_in, c_out: nn.Sequential(nn.Linear(in_features=c_in, out_features=c_out), nn.LeakyReLU())
 
@@ -123,11 +126,11 @@ class CharHistCNN(nn.Module):
             raise ValueError(f'culd not initialize model: image width and height aught to be divisible by {stride_prod}')
         f_scale = 1/stride_prod
         s_fmap = int(shape_in[1] * f_scale * shape_in[2] * f_scale)
-        self.fc1 = nn.Sequential(fc_layer(32* s_fmap, 1024),
-                                 fc_layer(1024, 1024), nn.Dropout(0.5),
-                                 fc_layer(1024, 1024), nn.Dropout(0.5))
+        self.fc1 = nn.Sequential(fc_layer(32* s_fmap, 1024))#,
+                                 #fc_layer(1024, 1024), nn.Dropout(0.5),
+                                 #fc_layer(1024, 1024), nn.Dropout(0.5))
         self.out = nn.Sequential(fc_layer(1024, 1024),
-                                 nn.Linear(1024, n_char_class), nn.Softmax(dim=1))#nn.Sigmoid())#
+                                 nn.Linear(1024, n_char_class), nn.LogSoftmax(dim=1))#nn.Sigmoid())#
 
     def forward(self, x):
         """

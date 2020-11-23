@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from argparse import ArgumentParser
 from src.model import *
+from src import ctc_decoder
 from src.data import *
 import src.milestone1 as ms1
 import torch
@@ -26,11 +27,11 @@ class Trainer:
         self.prog_bar = prog_bar
 
     def crierion(self):
-        return torch.nn.CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
+        return torch.nn.CTCLoss(blank=0, reduction='mean').to(self.device)#, zero_infinity=True)
         #return torch.nn.L1Loss()#MSELoss()#CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
-        return torch.optim.Adam(self.model.parameters(), lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
+        return torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)#lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
         #return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
         #return torch.optim.SGD(self.model.parameters(),  lr=0.001, momentum=0.9)#
 
@@ -53,7 +54,7 @@ class Trainer:
                                  collate_fn=self.dset.batch_transform)
             for batch, targets, l_targets in dloader:
                 # forward pass
-                batch, embds = batch.to(self.device), embds.to(self.device)
+                batch, targets = batch.to(self.device), targets.to(self.device)
                 y = self.model(batch)
                 # computing loss and gradients
                 loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
@@ -62,6 +63,12 @@ class Trainer:
                 # optimization step
                 optimizer.step()
                 # finally increasing the optimization step counter
+                if it_count % 100 == 0:
+                    hyp = ctc_decoder.decode(y[0].detach().cpu().numpy())
+                    gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
+                    hyp = torch.tensor(hyp)
+                    gt_transcript = torch.tensor(gt_transcript)
+                    print(f'hypthesis: {self.dset.embedding_to_word(hyp)}\ngt: {self.dset.embedding_to_word(gt_transcript)}')
                 it_count += 1
                 if it_count >= self.iterations:
                     break
@@ -70,7 +77,7 @@ class Trainer:
                     last10loss = np.roll(last10loss, 1)
                     last10loss[0] = loss.item()
                     mean_loss = np.mean(last10loss)
-                    prog_bar.set_description("epoch %d | mean loss = %f" % (epoch_count, mean_loss / self.s_batch))
+                    prog_bar.set_description("epoch %d | mean loss = %f" % (epoch_count, mean_loss))
             epoch_count += 1
         # moving clearing the GPU memory
         batch.cpu()
@@ -89,11 +96,11 @@ def arg_parser():
     return ap
 
 
-def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256):
+def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=150):
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([Resize([32,3000]), ToTensor()]))
+                             transformation=Compose([Resize([32,32*seq_len]), ToTensor()]))
     model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
-                     shape_in=(1, 32, 32))
+                     shape_in=(1, 32, 32*3))
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
                       prog_bar=prog_bar)
     trainer.train()
