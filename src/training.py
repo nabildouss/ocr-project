@@ -17,7 +17,7 @@ import numpy as np
 class Trainer:
 
     def __init__(self, model, dset, iterations=int(1e5), s_batch=16, device=torch.device('cpu'), n_workers=4,
-                 prog_bar=False):
+                 prog_bar=False, out='models/mymodel.pth'):
         self.model = model
         self.dset = dset
         self.iterations = iterations
@@ -25,9 +25,10 @@ class Trainer:
         self.device = device
         self.n_workers = n_workers
         self.prog_bar = prog_bar
+        self.out = out
 
     def crierion(self):
-        return torch.nn.CTCLoss(blank=0, reduction='mean').to(self.device)#, zero_infinity=True)
+        return torch.nn.CTCLoss(blank=0, reduction='mean', zero_infinity=True).to(self.device)#, zero_infinity=True)
         #return torch.nn.L1Loss()#MSELoss()#CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
@@ -64,14 +65,18 @@ class Trainer:
                 optimizer.step()
                 # finally increasing the optimization step counter
                 if it_count % 100 == 0:
-                    hyp = ctc_decoder.decode(y[0].detach().cpu().numpy())
+                    hyp = ctc_decoder.decode(y[:,0,:].detach().cpu().numpy())
                     gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
                     hyp = torch.tensor(hyp)
                     gt_transcript = torch.tensor(gt_transcript)
-                    print(f'hypthesis: {self.dset.embedding_to_word(hyp)}\ngt: {self.dset.embedding_to_word(gt_transcript)}')
+                    print(torch.argmax(y[:,0,:], dim=1)[:50])
+                    print(gt_transcript[:50])
+                    print(f'hypthesis: "{self.dset.embedding_to_word(hyp)}"\ngt: "{self.dset.embedding_to_word(gt_transcript)}"')
                 it_count += 1
                 if it_count >= self.iterations:
                     break
+                if it_count % 1000 == 0:
+                    torch.save(self.model.state_dict(), self.out)
                 if self.prog_bar:
                     prog_bar.update(1)
                     last10loss = np.roll(last10loss, 1)
@@ -96,18 +101,18 @@ def arg_parser():
     return ap
 
 
-def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=150):
-    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([Resize([32,32*seq_len]), ToTensor()]))
-    model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
-                     shape_in=(1, 32, 32*3))
-    trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
-                      prog_bar=prog_bar)
-    trainer.train()
+def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_len=132, pixels=32):
     if out is not None:
         if not os.path.isdir(os.path.dirname(out)):
             os.makedirs(os.path.dirname(out))
-        torch.save(trainer.model.state_dict(), out)
+    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                             transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]))
+    model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
+                     shape_in=(1, pixels, pixels))
+    trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
+                      prog_bar=prog_bar, out=out)
+    trainer.train()
+    torch.save(trainer.model.state_dict(), out)
 
 
 if __name__ == '__main__':

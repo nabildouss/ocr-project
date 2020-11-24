@@ -7,8 +7,9 @@ import numpy as np
 
 class SlidingWindow:
 
-    def __init__(self, seq_len=150):
+    def __init__(self, seq_len=150, overlap=False):
         self.seq_len = seq_len
+        self.overlap = overlap
 
     def split_img(self, img):
         if len(img.shape) != 3:
@@ -20,16 +21,19 @@ class SlidingWindow:
 
     def sliding_windows(self, img, n_windows=4):
         splits = self.split_img(img)
-        windows = []
-        for i in range(self.seq_len):
-            if i == 0:
-                w = torch.cat([*splits[:n_windows]], dim=2)
-            elif i >= self.seq_len-n_windows:
-                w = torch.cat([*splits[-n_windows:]], dim=2)
-            else:
-                w = torch.cat([*splits[i:i+n_windows]], dim=2)
-            windows.append(w)
-        return torch.stack(windows)
+        if self.overlap:
+            windows = []
+            for i in range(self.seq_len):
+                if i == 0:
+                    w = torch.cat([*splits[:n_windows]], dim=2)
+                elif i >= self.seq_len-n_windows:
+                    w = torch.cat([*splits[-n_windows:]], dim=2)
+                else:
+                    w = torch.cat([*splits[i:i+n_windows]], dim=2)
+                windows.append(w)
+            return torch.stack(windows)
+        else:
+            return splits
 
 
 class PyramidalSlidingWindow(SlidingWindow):
