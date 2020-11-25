@@ -86,9 +86,10 @@ class BaseLine(nn.Module):
         self.permute = Permute([0, 3, 1, 2])
         #self.dense = nn.Sequential(nn.Linear(self.cnn.d_out[0] * self.cnn.d_out[1], n_char_class), nn.ReLU())
         self.sliding_window = SlidingWindow(seq_len=self.sequence_length)
-        self.lstm1 = nn.LSTM(input_size=int(n_char_class), hidden_size=n_char_class, num_layers=3, dropout=0.25,#)
-                             bidirectional=True, batch_first=True)
-        self.fc = nn.Sequential(nn.Linear(2*n_char_class, n_char_class))
+        self.lstm1 = nn.LSTM(input_size=int(n_char_class), hidden_size=n_char_class, num_layers=3, #dropout=0.25,#)
+                             bidirectional=False, batch_first=True)
+        #self.fc = nn.Sequential(nn.Linear(2*n_char_class, n_char_class))
+        #self.fc = nn.Sequential(nn.Linear(n_char_class, n_char_class))
 
     def forward(self, batch):
         s_windows = []
@@ -100,7 +101,7 @@ class BaseLine(nn.Module):
         y = y.view(batch.shape[0], self.sequence_length, self.n_char_class)
         #y = self.dense(y)
         y, _ = self.lstm1(y)
-        y = self.fc(y)
+        #y = self.fc(y)
         y = y.transpose(1, 0) # T, N, C
         return nn.functional.log_softmax(y[:,:,:self.n_char_class], dim=2)
 

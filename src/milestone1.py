@@ -23,7 +23,7 @@ def show(x, outfile=None):
         plt.show()
 
 
-def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=None, corpora=data.ALL_CORPORA):
+def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=None, corpora=data.ALL_CORPORA, alphabet=None):
     """
     Generates the data sets
 
@@ -59,7 +59,7 @@ def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=N
             kwargs_train['transformation'] = transformation
             kwargs_test['transformation'] = transformation
         # train and test data based on defined parameters
-        dset_train = data.GT4HistOCR(**kwargs_train)
-        dset_test = data.GT4HistOCR(**kwargs_test)
+        dset_train = data.GT4HistOCR(**kwargs_train, alphabet=alphabet)
+        dset_test = data.GT4HistOCR(**kwargs_test, alphabet=alphabet)
         return dset_train, dset_test
     raise NotImplementedError(f'The dataset {data_set} is unknown.')

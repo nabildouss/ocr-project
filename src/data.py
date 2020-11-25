@@ -168,9 +168,10 @@ class OCRDataSet(Dataset):
             # images do not need to be changed
             batch.append(img)
             # mapping characters to integers
-            targets.append(self.word_to_embedding(transcript))
+            emb = self.word_to_embedding(transcript)
+            targets.append(emb)
             # keeping track of ooriginal lengths
-            l_targets.append(len(transcript))
+            l_targets.append(len(emb))
         # Tensor conversion for batch and targets, the lengths can stay as a list
         #return torch.stack(batch), torch.nn.utils.rnn.pad_sequence(targets, batch_first=True), l_targets
         return torch.stack(batch), torch.cat(targets), l_targets
@@ -182,7 +183,13 @@ class OCRDataSet(Dataset):
         :param word: string of word
         :return: embedding / mapping to ints
         """
-        return torch.from_numpy(np.array([self.character_int_map[c] for c in word], dtype=np.int_))
+        emb = []
+        for c in word:
+            try:
+                emb.append(self.character_int_map[c])
+            except KeyError:
+                pass
+        return torch.from_numpy(np.array(emb, dtype=np.int_))
 
     def embedding_to_word(self, emb, blank=0):
         """
@@ -191,7 +198,10 @@ class OCRDataSet(Dataset):
         :param emb: sequence of integer values of a word
         :return: string / word representation
         """
-        to_chars = [self.int_chatacter_map[int(i.detach().numpy())] for i in emb if i.detach().numpy() != blank]
+        to_chars = []
+        for i in emb:
+            if  i.detach().numpy() != blank:
+                to_chars.append(self.int_chatacter_map[int(i.detach().numpy())])
         if to_chars == []:
             return ''
         return ''.join(to_chars)
@@ -231,7 +241,7 @@ class GT4HistOCR(OCRDataSet):
     For now we consider that the dataset is used for pretraining untill we discover official splits.
     """
 
-    def __init__(self, dset_path, corpora=ALL_CORPORA, f_split=None,
+    def __init__(self, dset_path, corpora=ALL_CORPORA, f_split=None, alphabet=None,
                  transformation=Compose([Resize([64, 512]), ToTensor()])):
         """
         Dataset adapter for the GT4HistOCR data set
@@ -246,6 +256,7 @@ class GT4HistOCR(OCRDataSet):
         fltr_in_corpora = (np.sum([np.char.count(img_paths, c.value) for c in corpora], axis=0) > 0).astype(bool)
         img_paths,  gt_paths = img_paths[fltr_in_corpora], gt_paths[fltr_in_corpora]
         # initialize the OCR data set
-        alphabet = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'GT4HistOCR_alphabet.npy'))
+        if alphabet is None:
+            alphabet = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'GT4HistOCR_alphabet.npy'))
         super().__init__(img_paths,  gt_paths, f_split=f_split, transformation=transformation, alphabet=alphabet)
 

@@ -1,3 +1,4 @@
+import string
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -32,9 +33,9 @@ class Trainer:
         #return torch.nn.L1Loss()#MSELoss()#CTCLoss(blank=0).to(self.device)#, zero_infinity=True)
 
     def optimizer(self):
-        return torch.optim.Adam(self.model.parameters(), lr=0.0001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)#lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
+        return torch.optim.Adam(self.model.parameters())#, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)#lr=1e-4, betas=(0.9, 0.99), weight_decay=0.00005)
         #return torch.optim.Adam(self.model.parameters(), lr=1e-5, betas=(0.9, 0.99), weight_decay=0.00005)
-        #return torch.optim.SGD(self.model.parameters(),  lr=0.001, momentum=0.9)#
+        #return torch.optim.SGD(self.model.parameters(),  lr=0.0001, momentum=0.9)#
 
     def train(self):
         # setting up the training:
@@ -69,8 +70,11 @@ class Trainer:
                     gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
                     hyp = torch.tensor(hyp)
                     gt_transcript = torch.tensor(gt_transcript)
+                    print('')
                     print(torch.argmax(y[:,0,:], dim=1)[:50])
+                    print(y[:,0,:][:50])
                     print(gt_transcript[:50])
+                    print('')
                     print(f'hypthesis: "{self.dset.embedding_to_word(hyp)}"\ngt: "{self.dset.embedding_to_word(gt_transcript)}"')
                 it_count += 1
                 if it_count >= self.iterations:
@@ -106,7 +110,8 @@ def run_training(iterations, data_set, batch_size, device, out, prog_bar, seq_le
         if not os.path.isdir(os.path.dirname(out)):
             os.makedirs(os.path.dirname(out))
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]))
+                             transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]), corpora=[Corpus.EarlyModernLatin],
+                             alphabet=None)#string.ascii_letters + string.digits + ' ')
     model = BaseLine(n_char_class=len(train.character_classes)+1, sequence_length=seq_len,
                      shape_in=(1, pixels, pixels))
     trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
