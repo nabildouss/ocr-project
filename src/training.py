@@ -168,12 +168,36 @@ def run_training_3(iterations, data_set, batch_size, device, out, prog_bar, seq_
     torch.save(trainer.model.state_dict(), out)
 
 
+def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256, pixels=48):#seq_len=132
+    # sanity checking for the output path
+    if out is not None:
+        if not os.path.isdir(os.path.dirname(out)):
+            os.makedirs(os.path.dirname(out))
+    # gathering the training data
+    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
+                             corpora=[Corpus.EarlyModernLatin])
+    # setting up the (baseline-) model
+    model = Kraken()
+    # initializing training loop
+    trainer = Trainer(model, train, iterations=iterations, s_batch=batch_size, device=device,
+                      prog_bar=prog_bar, out=out)
+    # training
+    trainer.train()
+    # savong the trained model
+    torch.save(trainer.model.state_dict(), out)
+
+
+
+
 if __name__ == '__main__':
     ap = arg_parser().parse_args()
     #run_training_1(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #               out=ap.out,  prog_bar=ap.prog_bar)
+    run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
                    out=ap.out,  prog_bar=ap.prog_bar)
 

@@ -6,6 +6,43 @@ from torch import nn
 from src.sliding_window import SlidingWindow, AutomaticWindow
 
 
+class Kraken(nn.Module):
+
+
+    def __init__(self, n_char_class=262):
+        super().__init__()
+        self.height = 48
+        self.in_channels = 1
+        self.n_char_class = n_char_class
+        self.sequence_length = 150
+        self.conv1 = nn.Sequential(nn.Conv2d(self.in_channels, 32, kernel_size=(3, 3), padding=1), nn.ReLU())
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.conv2 = nn.Sequential(nn.Conv2d(32, 64, kernel_size=(3, 3), padding=1), nn.ReLU())
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 2))
+        self.lstm = nn.LSTM(input_size=64*12, hidden_size=self.n_char_class, 
+                            bidirectional=True)
+        self.out = nn.Linear(2*self.n_char_class, self.n_char_class)
+
+    def forward(self, x):
+        assert x.shape[1] == self.in_channels and x.shape[2] == self.height
+        #print(x.shape)
+        y = self.conv1(x)
+        y = self.pool1(y)
+        y = self.conv2(y)
+        y = self.pool2(y)
+        # reshaping
+        #print(y.shape)
+        bs = [y[:,:,:,i].flatten(start_dim=1) for i in range(y.shape[3])] # (T, N, 64* F)
+        y = torch.stack(bs)
+        #print(y.shape)
+        #raise
+        # lstm
+        y, _ = self.lstm(y)
+        y = self.out(y)
+        y = torch.log_softmax(y, dim=2)
+        return y
+
+
 class BaseLine1(nn.Module):
     """
     This Model uses a LSTM to work directly on the images columns.
