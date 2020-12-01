@@ -23,7 +23,8 @@ def show(x, outfile=None):
         plt.show()
 
 
-def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=None, corpora=data.ALL_CORPORA, alphabet=None):
+def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=None, corpora=data.ALL_CORPORA
+              , alphabet=None, cluster=None):
     """
     Generates the data sets
 
@@ -32,14 +33,16 @@ def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=N
     :param n_train: either number or percentage of training images, None will default to official splits (if they exist)
     :param n_test: either number or percentage of test images, None will default to official splits (if they exist)
     :param corpora: GT4HistOCR specific corpora to be used, defaults to all corpora
+    :param cluster: either the path to dataset in cluster, None will default to local path
     :return: training and test splits
     """
+    cluster_path = '/home/space/datasets/GT4HistOCR/corpus'
     kwargs_train = {}
     kwargs_test = {}
     if data_set == 'GT4HistOCR':
         # directory of the dataset
-        kwargs_train['dset_path'] = os.path.join('..', 'corpus')
-        kwargs_test['dset_path'] = os.path.join('..', 'corpus')
+        kwargs_train['dset_path'] = os.path.join('..', 'corpus') if not cluster else cluster_path
+        kwargs_test['dset_path'] = os.path.join('..', 'corpus') if not cluster else cluster_path
         kwargs_train['corpora'] = corpora
         kwargs_test['corpora'] = corpora
         # train/ test splits
