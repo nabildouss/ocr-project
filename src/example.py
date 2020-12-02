@@ -113,18 +113,20 @@ if __name__ == '__main__':
     model = Kraken(n_char_class=len(dset.alphabet)).to(device)
     # setup
     criterion = nn.CTCLoss(blank=0, reduction='mean').to(device)
-    optim = torch.optim.SGD(model.parameters(), lr=0.002)
+    optim = torch.optim.Adam(model.parameters(), lr=0.002)
     # training loop
     dloader = DataLoader(dset, batch_size=4, num_workers=4, shuffle=True, collate_fn=dset.collate)
     it = 0
     while it < 10000:
-        dloader = DataLoader(dset, batch_size=4, num_workers=4, shuffle=True, collate_fn=dset.collate)
+        #dloader = DataLoader(dset, batch_size=4, num_workers=4, shuffle=True, collate_fn=dset.collate)
         for img, emb, lens in dloader:
             y = model(img.to(device))
+            #model.train()
+            model.zero_grad()
             loss = criterion(y, emb.to(device), [256 for _ in range(len(lens))], lens)
             loss.backward()
             optim.step()
-            if it % 100 == 0:
+            if it % 50 == 0:
                 print(f'iteration {it}')
                 print(f'gt: "{to_str(emb[:lens[0]], dset)}"')
                 print(f'prediction: "{to_str(torch.argmax(y[:, 0], dim=1), dset)}"\n')

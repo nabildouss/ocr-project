@@ -33,7 +33,7 @@ class Trainer:
         return torch.nn.CTCLoss(blank=0, reduction='mean').to(self.device)
 
     def optimizer(self):
-        return torch.optim.Adam(self.model.parameters())#, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        return torch.optim.Adam(self.model.parameters(), lr=0.002)#, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         #return torch.optim.SGD(self.model.parameters(),  lr=0.0001, momentum=0.9)
 
     def train(self):
@@ -49,15 +49,16 @@ class Trainer:
         L_IN = [int(self.model.sequence_length) for _ in range(self.s_batch)]
         epoch_count = 1
         last10loss = np.zeros(50)
+        # new data loader initialization required after each epoch 
+        dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
+                             collate_fn=self.dset.batch_transform)
+        self.model.train()
         while it_count < self.iterations:
-            # new data loader initialization required after each epoch 
-            dloader = DataLoader(self.dset, batch_size=self.s_batch, num_workers=self.n_workers, shuffle=True,
-                                 collate_fn=self.dset.batch_transform)
             # epoch loop
             for batch, targets, l_targets in dloader:
                 # forward pass
                 batch, targets = batch.to(self.device), targets.to(self.device)
-                optimizer.zero_grad()
+                self.model.zero_grad()
                 y = self.model(batch)
                 # computing loss and gradients
                 loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
@@ -65,16 +66,16 @@ class Trainer:
                 # optimization step
                 optimizer.step()
                 # fetching a sample and outputting the best path searchs result (should show if overfitting is happening)
-                if it_count % 100 == 0:
+                if it_count % 50 == 0:
                     hyp = ctc_decoder.decode(y[:,0,:].detach().cpu().numpy())
                     gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
                     hyp = torch.tensor(hyp)
                     gt_transcript = torch.tensor(gt_transcript)
                     print('')
-                    print(torch.argmax(y[:,0,:], dim=1)[:50])
-                    print(y[:,0,:][:50])
-                    print(gt_transcript[:50])
-                    print('')
+                    #print(torch.argmax(y[:,0,:], dim=1)[:50])
+                    #print(y[:,0,:][:50])
+                    #print(gt_transcript[:50])
+                    #print('')
                     print(f'hypthesis: "{self.dset.embedding_to_word(hyp)}"\ngt: "{self.dset.embedding_to_word(gt_transcript)}"')
                 # finally increasing the optimization step counter
                 it_count += 1
@@ -178,6 +179,11 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
                              transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
                              corpora=[Corpus.EarlyModernLatin])
+    #from src.example import ToyData, to_str
+    #train = ToyData('toydata')
+    #train.batch_transform = train.collate
+    #train.embedding_to_word = lambda x: to_str(x, train)
+    #model = Kraken(n_char_class=len(train.alphabet))
     # setting up the (baseline-) model
     model = Kraken()
     # initializing training loop
