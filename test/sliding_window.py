@@ -71,9 +71,9 @@ class TestPyramidalSlidingWindow(TestCase):
 class TestSlidingWindow(TestCase):
 
     def setUp(self):
-        self.seq_len = 350
+        self.seq_len = 150
         self.dset = GT4HistOCR(os.path.join('..', 'corpus'),
-                               transformation=Compose([Resize([32, 32*self.seq_len]), ToTensor()]))
+                               transformation=Compose([Resize([24, 24*self.seq_len]), ToTensor()]))
         self.sliding_w = sliding_window.SlidingWindow(seq_len=self.seq_len)
 
     def test_split_img(self):
@@ -85,7 +85,7 @@ class TestSlidingWindow(TestCase):
             print(transcript[k])
             chars[k*char_width:k*char_width+char_width] = transcript[k]
         i = 0
-        for w in sliding_windows[:25]:
+        for w in sliding_windows[:35]:
             f, (ax1, ax2) = plt.subplots(1, 2)
             ax1.imshow(w.numpy()[0], cmap='bone')
             ax2.text(0, 0, chars[i], fontsize=128)

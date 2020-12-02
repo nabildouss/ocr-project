@@ -14,8 +14,8 @@ class TestCTCT_decode_functions(TestCase):
         self.word = 'aab'
 
     def test_decode(self):
-        decoded, _ =  ctc_decoder.decode(self.probs)
-        str_decoded = ''.join([self.chars[i-1] for i in decoded])
+        decoded = ctc_decoder.decode(self.probs)
+        str_decoded = ''.join([self.chars[int(i)-1] for i in decoded])
         print(str_decoded)
         self.assertEqual(str_decoded,  self.word)
 
