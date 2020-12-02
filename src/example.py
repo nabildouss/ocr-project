@@ -33,8 +33,8 @@ class Kraken(nn.Module):
         bs = [y[:,:,:,i].flatten(start_dim=1) for i in range(y.shape[3])] # (T, N, 64*12)
         y = torch.stack(bs)
         # lstm
-        y, _ = self.lstm(y)
-        y = self.out(y)
+        y, _ = self.lstm(y) # (T, N, 2*C)
+        y = self.out(y) # (T, N, C)
         y = torch.log_softmax(y, dim=2)
         return y
 
@@ -125,7 +125,6 @@ if __name__ == '__main__':
             loss.backward()
             optim.step()
             if it % 100 == 0:
-                print(y[:, 0].shape)
                 print(f'iteration {it}')
                 print(f'gt: "{to_str(emb[:lens[0]], dset)}"')
                 print(f'prediction: "{to_str(torch.argmax(y[:, 0], dim=1), dset)}"')
