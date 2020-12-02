@@ -177,7 +177,7 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
             os.makedirs(os.path.dirname(out))
     # gathering the training data
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
+                             transformation=Compose([Resize([48,2000]), ToTensor()]),
                              corpora=[Corpus.EarlyModernLatin])
     #from src.example import ToyData, to_str
     #train = ToyData('toydata')
