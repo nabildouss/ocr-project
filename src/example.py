@@ -110,9 +110,9 @@ if __name__ == '__main__':
     if torch.cuda.device_count() > 0:
         device = torch.device('cuda')
     dset = ToyData('toydata')
-    model = Kraken(n_char_class=len(dset.alphabet))
+    model = Kraken(n_char_class=len(dset.alphabet)).to(device)
     # setup
-    criterion = nn.CTCLoss(blank=0, reduction='mean')
+    criterion = nn.CTCLoss(blank=0, reduction='mean').to(device)
     optim = torch.optim.SGD(model.parameters(), lr=0.002)
     # training loop
     dloader = DataLoader(dset, batch_size=4, num_workers=4, shuffle=True, collate_fn=dset.collate)
@@ -120,8 +120,8 @@ if __name__ == '__main__':
     while it < 10000:
         dloader = DataLoader(dset, batch_size=4, num_workers=4, shuffle=True, collate_fn=dset.collate)
         for img, emb, lens in dloader:
-            y = model(img)
-            loss = criterion(y, emb, [256 for _ in range(len(lens))], lens)
+            y = model(img.to(device))
+            loss = criterion(y, emb.to(device), [256 for _ in range(len(lens))], lens)
             loss.backward()
             optim.step()
             if it % 100 == 0:
