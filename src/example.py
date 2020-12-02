@@ -127,7 +127,7 @@ if __name__ == '__main__':
             if it % 100 == 0:
                 print(f'iteration {it}')
                 print(f'gt: "{to_str(emb[:lens[0]], dset)}"')
-                print(f'prediction: "{to_str(torch.argmax(y[:, 0], dim=1), dset)}"')
+                print(f'prediction: "{to_str(torch.argmax(y[:, 0], dim=1), dset)}"\n')
             it += 1
             if it >= 10000:
                 break
