@@ -126,8 +126,9 @@ if __name__ == '__main__':
             optim.step()
             if it % 100 == 0:
                 print(y[:, 0].shape)
-                print(f'"{to_str(emb[:lens[0]], dset)}"')
-                print(f'"{to_str(torch.argmax(y[:, 0], dim=1), dset)}"')
+                print(f'iteration{it}')
+                print(f'gt: "{to_str(emb[:lens[0]], dset)}"')
+                print(f'prediction: "{to_str(torch.argmax(y[:, 0], dim=1), dset)}"')
             it += 1
             if it >= 10000:
                 break
