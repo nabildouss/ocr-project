@@ -57,6 +57,7 @@ class Trainer:
             for batch, targets, l_targets in dloader:
                 # forward pass
                 batch, targets = batch.to(self.device), targets.to(self.device)
+                optimizer.zero_grad()
                 y = self.model(batch)
                 # computing loss and gradients
                 loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
