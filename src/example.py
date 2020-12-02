@@ -39,7 +39,7 @@ class Kraken(nn.Module):
         return y
 
 
-class ToyData(nn.Module):
+class ToyData(Dataset):
 
     def __init__(self, path):
         super().__init__()
