@@ -42,6 +42,8 @@ class Trainer:
         criterion, optimizer = self.crierion(), self.optimizer()
         # moving the model to the correct (GPU-) device
         self.model.to(self.device)
+        self.model.train()
+        self.model.zero_grad()
         if self.prog_bar:
             prog_bar = tqdm.tqdm(total=self.iterations)
         # the training loop
@@ -57,7 +59,7 @@ class Trainer:
             for batch, targets, l_targets in dloader:
                 # forward pass
                 batch, targets = batch.to(self.device), targets.to(self.device)
-                optimizer.zero_grad()
+                #optimizer.zero_grad()
                 y = self.model(batch)
                 # computing loss and gradients
                 loss = criterion(y, targets, L_IN[:len(l_targets)], l_targets)
