@@ -254,7 +254,6 @@ class Evaluator:
             y = self.model(batch)
             #hypotheses = CTC_to_int(y)
             hypotheses = []
-            print(y.shape)
             for i in range(y.shape[1]):
                 P = y[:, i]
                 hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
