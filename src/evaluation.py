@@ -276,7 +276,7 @@ class Evaluator:
 def arg_parser():
     ap = ArgumentParser()
     ap.add_argument('--model_type', default='Baseline3', type=str)
-    ap.add_argument('--corpus_ids', default='01234', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=dta19, 4=RefCorpus_ENHG_Incunabula
+    ap.add_argument('--corpus_ids', default='01234', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=RefCorpus_ENHG_Incunabula, 4=dta19
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
     ap.add_argument('--batch_size', default=4, type=int)
     ap.add_argument('--device', default='cpu', type=str)
@@ -353,4 +353,4 @@ if __name__ ==  '__main__':
     if ap.model_type == 'Baseline3':
         run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
     elif ap.model_type == 'Kraken':
-        run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, copora=copora)
+        run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
