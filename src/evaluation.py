@@ -7,7 +7,7 @@ import os
 import json
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from src.model import *
+from src.baseline import *
 from src.data import *
 import src.milestone1 as ms1
 from src import ctc_decoder
@@ -254,11 +254,14 @@ class Evaluator:
             y = self.model(batch)
             #hypotheses = CTC_to_int(y)
             hypotheses = []
-            for P in y:
+            print(y.shape)
+            for i in range(y.shape[1]):
+                P = y[:, i]
                 hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
             for h, r in zip(hypotheses, gt):
                 hyp, ref = map(self.dset.embedding_to_word, [h, r])
-                print(f'hyp: {hyp}\nref: {ref}\n')
+                if it % 100 == 0:
+                    print(f'hyp: {hyp}\nref: {ref}\n')
                 l_wer.append(wer(ref, hyp))
                 l_cer.append(cer(ref, hyp))
                 l_adj_wer.append(adjusted_cer(ref, hyp))
@@ -266,13 +269,15 @@ class Evaluator:
             if self.prog_bar:
                 prog_bar.update(1)
             it_count += 1
-            if it_count > 500:
-                break
+            #if it_count > 10:
+            #    break
         return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer])
 
 
 def arg_parser():
     ap = ArgumentParser()
+    ap.add_argument('--model_type', default='Baseline3', type=str)
+    ap.add_argument('--corpus_ids', default='01234', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=dta19, 4=RefCorpus_ENHG_Incunabula
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
     ap.add_argument('--batch_size', default=4, type=int)
     ap.add_argument('--device', default='cpu', type=str)
@@ -282,17 +287,50 @@ def arg_parser():
     return ap
 
 
-def run_evaluation(pth_model, data_set, s_batch, device, prog_bar, pth_out):
+def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
     if pth_model is None:
         raise ValueError('Please submit a path to the model you want to evaluate')
-    seq_len = 256
-    # loading the test split
+
+    if not os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    # gathering the training data
     _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
-                            transformation=Compose([Resize([32, 32*seq_len]), ToTensor()]))
+                             transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
+                             corpora=corpora)
+    # setting up the (baseline-) model
+    model = BaseLine3(n_char_class=len(test.character_classes)+1, shape_in=(1, pixels, pixels*seq_len),
+                      sequence_length=seq_len)
     # loading the model
     state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
-    model = BaseLine(n_char_class=len(test.character_classes)+1, sequence_length=seq_len,
-                     shape_in=(1, 32, 3*32))
+    model.load_state_dict(state_dict=state_dict)
+    # setting up the evaluation
+    evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
+    # evaluating the model
+    wer, adj_wer, cer, adj_cer = evaluator.eval()
+    # setting up a dictionary to summariza evalutation
+    summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
+    # storing the dictionary as a JSON file
+    if not  os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    with open(pth_out, 'w') as f_out:
+        json.dump(summary, f_out)
+    # finally printing the results
+    print(summary)
+
+
+def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
+    if pth_model is None:
+        raise ValueError('Please submit a path to the model you want to evaluate')
+    if not os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    # gathering the training data
+    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                            transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
+                            corpora=corpora)
+    # setting up the (baseline-) model
+    model = Kraken(n_char_class=len(test.character_classes)+1)
+    # loading the model
+    state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict=state_dict)
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
@@ -311,4 +349,9 @@ def run_evaluation(pth_model, data_set, s_batch, device, prog_bar, pth_out):
 
 if __name__ ==  '__main__':
     ap = arg_parser().parse_args()
-    run_evaluation(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out)
+    corpus_ids = [int(c) for c in ap.corpus_ids]
+    corpora = [ALL_CORPORA[i] for i in corpus_ids]
+    if ap.model_type == 'Baseline3':
+        run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    elif ap.model_type == 'Kraken':
+        run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, copora=copora)
