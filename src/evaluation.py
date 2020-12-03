@@ -260,7 +260,7 @@ class Evaluator:
                 hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
             for h, r in zip(hypotheses, gt):
                 hyp, ref = map(self.dset.embedding_to_word, [h, r])
-                if it % 100 == 0:
+                if it_count % 100 == 0:
                     print(f'hyp: {hyp}\nref: {ref}\n')
                 l_wer.append(wer(ref, hyp))
                 l_cer.append(cer(ref, hyp))
