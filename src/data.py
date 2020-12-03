@@ -26,8 +26,8 @@ class Corpus(Enum):
     EarlyModernLatin = 'EarlyModernLatin'
     Kallimachos = 'Kallimachos'
     RIDGES_Fraktur = 'RIDGES-Fraktur'
-    RefCorpus_ENHG_Incunabula = 'dta19'
-    dta19 = 'RefCorpus-ENHG-Incunabula'
+    RefCorpus_ENHG_Incunabula = 'RefCorpus-ENHG-Incunabula'
+    dta19 = 'dta19'
 
 
 # Most likely we will use all corpora, hence this global constant

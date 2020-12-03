@@ -102,10 +102,13 @@ def arg_parser():
     ap = ArgumentParser()
     ap.add_argument('--iterations', default=int(1e5), type=int)
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
+    ap.add_argument('--data_set_path', default='/home/space/datasets/GT4HistOCR/corpus', type=str)
+    ap.add_argument('--corpus_ids', default='12345', type=str) # 1=EarlyModernLatin, 2=Kallimachos, 3=RIDGES_Fraktur, 4=dta19, 5=RefCorpus_ENHG_Incunabula
     ap.add_argument('--batch_size', default=20, type=int)
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
     ap.add_argument('--out', default=None)
+    ap.add_argument('--corpora_id', default=None)
     return ap
 
 
@@ -203,8 +206,8 @@ if __name__ == '__main__':
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    #run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-    #               out=ap.out,  prog_bar=ap.prog_bar)
-    run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
                    out=ap.out,  prog_bar=ap.prog_bar)
+    #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #               out=ap.out,  prog_bar=ap.prog_bar)
 
