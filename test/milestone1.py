@@ -1,9 +1,12 @@
 from unittest import TestCase
 import sys
+import os
 sys.path.append('..')
+sys.path.append(os.path.abspath(__file__))
 import src.milestone1 as ms1
 import numpy as np
 from torch.utils.data import DataLoader
+from src.data import *
 
 
 class TestMS1(TestCase):
@@ -34,3 +37,9 @@ class TestMS1(TestCase):
         d_loader = DataLoader(dataset=test, num_workers=4, batch_size=16, collate_fn=test.batch_transform)
         for batch, targets, l_targets in d_loader:
             pass
+
+    def test_default_splits(self):
+        for c in ALL_CORPORA:
+            train, test = ms1.load_data('GT4HistOCR', corpora=[c])
+            print(len(train), len(test), len(train)+len(test))
+

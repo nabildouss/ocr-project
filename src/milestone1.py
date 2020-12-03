@@ -1,6 +1,8 @@
 from src import data
 import matplotlib.pyplot as plt
 import os
+import numpy as np
+import sys
 
 
 def show(x, outfile=None):
@@ -45,6 +47,10 @@ def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=N
         kwargs_test['dset_path'] = os.path.join('..', 'corpus') if not cluster else cluster_path
         kwargs_train['corpora'] = corpora
         kwargs_test['corpora'] = corpora
+        # custom transformations
+        if transformation is not None:
+            kwargs_train['transformation'] = transformation
+            kwargs_test['transformation'] = transformation
         # train/ test splits
         if n_train is not None and n_test is not None:
             # n_train and n_test are fixed numbers
@@ -57,12 +63,37 @@ def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=N
                 f_split_test = lambda x: x[int(len(x)*n_train):int(len(x)*n_train)+int(len(x)*n_test)]
             kwargs_train['f_split'] = f_split_train
             kwargs_test['f_split'] = f_split_test
-        # custom transformations
-        if transformation is not None:
-            kwargs_train['transformation'] = transformation
-            kwargs_test['transformation'] = transformation
-        # train and test data based on defined parameters
-        dset_train = data.GT4HistOCR(**kwargs_train, alphabet=alphabet)
-        dset_test = data.GT4HistOCR(**kwargs_test, alphabet=alphabet)
+            # train and test data based on defined parameters
+            dset_train = data.GT4HistOCR(**kwargs_train, alphabet=alphabet)
+            dset_test = data.GT4HistOCR(**kwargs_test, alphabet=alphabet)
+        # predefined splits for corpora
+        else:
+            dset_test, dset_train = data.GT4HistOCR(**kwargs_test, alphabet=alphabet), data.GT4HistOCR(**kwargs_train,
+                                                                                                       alphabet=alphabet)
+            # discarding the paths for both splits / staring with empty data set
+            dset_test.img_paths = np.array([])
+            dset_test.gt_paths = np.array([])
+            dset_train.img_paths = np.array([])
+            dset_train.gt_paths = np.array([])
+            # collecting individual corpus splits and concatenating them
+            for c in corpora:
+                # loading the desired split idcs
+                idcs_train = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{c.value}_train.npy'))
+                idcs_test = np.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{c.value}_test.npy'))
+                f_split_train = lambda x: x[idcs_train]
+                f_split_test = lambda x: x[idcs_test]
+                kwargs_train['f_split'] = f_split_train
+                kwargs_test['f_split'] = f_split_test
+                # split is only ever applicable for the specific corpus only
+                kwargs_train['corpora'] = [c]
+                kwargs_test['corpora'] = [c]
+                # applying the splits on the corpus
+                c_test, c_train = data.GT4HistOCR(**kwargs_test, alphabet=alphabet), data.GT4HistOCR(**kwargs_train,
+                                                                                                     alphabet=alphabet)
+                # concatenating / adding the predefined split to the dataset
+                dset_test.img_paths = np.concatenate([c_test.img_paths, dset_test.img_paths])
+                dset_test.gt_paths = np.concatenate([c_test.gt_paths, dset_test.gt_paths])
+                dset_train.img_paths = np.concatenate([c_train.img_paths, dset_train.img_paths])
+                dset_train.gt_paths = np.concatenate([c_train.gt_paths, dset_train.gt_paths])
         return dset_train, dset_test
     raise NotImplementedError(f'The dataset {data_set} is unknown.')
