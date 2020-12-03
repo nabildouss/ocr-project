@@ -152,7 +152,8 @@ def run_training_2(iterations, data_set, batch_size, device, out, prog_bar, seq_
     torch.save(trainer.model.state_dict(), out)
 
 
-def run_training_3(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256, pixels=32):#seq_len=132
+def run_training_3(iterations, data_set, batch_size, device, out, prog_bar, seq_len=256, pixels=32,
+                   corpora=ALL_CORPORA):#seq_len=132
     # sanity checking for the output path
     if out is not None:
         if not os.path.isdir(os.path.dirname(out)):
@@ -160,7 +161,7 @@ def run_training_3(iterations, data_set, batch_size, device, out, prog_bar, seq_
     # gathering the training data
     train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
                              transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
-                             corpora=[Corpus.EarlyModernLatin])
+                             corpora=corpora)
     # setting up the (baseline-) model
     model = BaseLine3(n_char_class=len(train.character_classes)+1, shape_in=(1, pixels, pixels*seq_len),
                       sequence_length=seq_len)
@@ -202,12 +203,14 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
 
 if __name__ == '__main__':
     ap = arg_parser().parse_args()
+    corpus_ids = [int(c) for c in ap.corpus_ids]
+    corpora = [ALL_CORPORA[i] for i in corpus_ids]
     #run_training_1(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
     run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-                   out=ap.out,  prog_bar=ap.prog_bar)
+                   out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
     #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
 
