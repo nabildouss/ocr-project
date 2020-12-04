@@ -159,7 +159,7 @@ def run_training_3(iterations, data_set, batch_size, device, out, prog_bar, seq_
         if not os.path.isdir(os.path.dirname(out)):
             os.makedirs(os.path.dirname(out))
     # gathering the training data
-    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    train, _ = ms1.load_data(data_set,
                              transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
                              corpora=corpora)
     # setting up the (baseline-) model
@@ -181,7 +181,7 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
         if not os.path.isdir(os.path.dirname(out)):
             os.makedirs(os.path.dirname(out))
     # gathering the training data
-    train, _ = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    train, _ = ms1.load_data(data_set,
                              transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
                              corpora=corpora)
     #from src.example import ToyData, to_str

@@ -19,7 +19,7 @@ class Kraken(nn.Module):
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2))
         self.conv2 = nn.Sequential(nn.Conv2d(32, 64, kernel_size=(3, 3), padding=1), nn.ReLU())
         self.pool2 = nn.MaxPool2d(kernel_size=(2, 2))
-        self.lstm = nn.LSTM(input_size=64*12, hidden_size=self.n_char_class, 
+        self.lstm = nn.LSTM(input_size=64*12, hidden_size=self.n_char_class,
                             bidirectional=True)
         self.out = nn.Linear(2*self.n_char_class, self.n_char_class)
 
