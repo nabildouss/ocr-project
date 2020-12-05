@@ -15,11 +15,12 @@ class Kraken(nn.Module):
         self.in_channels = 1
         self.n_char_class = n_char_class
         self.sequence_length = 150
-        self.conv1 = nn.Sequential(nn.Conv2d(self.in_channels, 32, kernel_size=(3, 3), padding=1), nn.ReLU())
+        self.conv1 = nn.Sequential(nn.Conv2d(self.in_channels, 32, kernel_size=(3, 3), padding=1), nn.ReLU(), 
+                                   nn.BatchNorm2d(32))
         self.pool1 = nn.MaxPool2d(kernel_size=(2, 2))
-        self.conv2 = nn.Sequential(nn.Conv2d(32, 64, kernel_size=(3, 3), padding=1), nn.ReLU())
+        self.conv2 = nn.Sequential(nn.Conv2d(32, 64, kernel_size=(3, 3), padding=1), nn.ReLU(), nn.BatchNorm2d(64))
         self.pool2 = nn.MaxPool2d(kernel_size=(2, 2))
-        self.lstm = nn.LSTM(input_size=64*12, hidden_size=self.n_char_class,
+        self.lstm = nn.LSTM(input_size=64*12, hidden_size=self.n_char_class, #num_layers=3,
                             bidirectional=True)
         self.out = nn.Linear(2*self.n_char_class, self.n_char_class)
 
