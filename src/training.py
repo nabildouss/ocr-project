@@ -183,7 +183,8 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
     # gathering the training data
     train, _ = ms1.load_data(data_set,
                              transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
-                             corpora=corpora)
+                             corpora=corpora,
+                             cluster=True)
     #from src.example import ToyData, to_str
     #train = ToyData('toydata')
     #train.batch_transform = train.collate
