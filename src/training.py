@@ -103,7 +103,7 @@ def arg_parser():
     ap.add_argument('--iterations', default=int(1e5), type=int)
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
     ap.add_argument('--data_set_path', default='/home/space/datasets/GT4HistOCR/corpus', type=str)
-    ap.add_argument('--corpus_ids', default='12345', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=RefCorpus_ENHG_Incunabula, 4=dta19
+    ap.add_argument('--corpus_ids', default='01234', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=RefCorpus_ENHG_Incunabula, 4=dta19
     ap.add_argument('--batch_size', default=20, type=int)
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
