@@ -210,8 +210,8 @@ if __name__ == '__main__':
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    #run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-    #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
-    run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
                    out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
 
