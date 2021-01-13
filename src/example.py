@@ -107,6 +107,7 @@ def to_str(idcs, dset):
 
 if __name__ == '__main__':
     device = torch.device('cpu')
+    print(torch.cuda.device_count())
     if torch.cuda.device_count() > 0:
         device = torch.device('cuda')
     dset = ToyData('toydata')

@@ -1,6 +1,13 @@
+#!/home/pml_22/virt_pml/bin/python3
+#$ -q all.q # do not fill the qlogin queue
+#$ -cwd # start processes in current working directory
+#$ -V # provide environment variables to processes
+#$ -t 1-2#100 # start 100 instances: from 1 to 100
 import string
 import sys
 import os
+sys.path.append('/home/pml_22/MS2/ocr-project/')
+sys.path.append('/home/pml_22/MS2/ocr-project/src')
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from argparse import ArgumentParser
@@ -211,8 +218,8 @@ if __name__ == '__main__':
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    #run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-    #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
-    run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
                    out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
 
