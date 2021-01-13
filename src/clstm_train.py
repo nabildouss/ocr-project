@@ -7,6 +7,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.data import *
+from src import ctc_decoder
 import src.milestone1 as ms1
 import matplotlib.pyplot as plt
 import cv2
@@ -66,6 +67,13 @@ def run_training(net, dset, n_workers=4, iterations=4e4):
             prog_bar.update(1)
             if it_count >= iterations:
                 break
+            if it_count % 50 == 0:
+                #hyp = ctc_decoder.decode(y[:, 0, :].detach().cpu().numpy())
+                gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
+                #hyp = torch.tensor(hyp)
+                gt_transcript = torch.tensor(gt_transcript)
+                print('')
+                #print(f'hypthesis: "{dset.embedding_to_word(hyp)}"\ngt: "{dset.embedding_to_word(gt_transcript)}"')
     return net
 
 
