@@ -63,15 +63,12 @@ def run_training(net, dset, n_workers=4, iterations=4e4):
             # increasing the iteration counter
             it_count += 1
             prog_bar.update(1)
-            if it_count >= iterations:
-                break
-    return net
+        return net
 
 
 def save(net, p_out):
     if not os.path.isdir(os.path.dirname(p_out)):
         os.makedirs(os.path.dirname(p_out))
-    clstm.save_net(p_out, net)
 
 
 
@@ -79,7 +76,6 @@ def parser():
     ap = ArgumentParser()
     ap.add_argument('--corpus_id', default=1, type=int)
     ap.add_argument('--out', default='CLSTM_models/my_model', type=str)
-    ap.add_argument('--iterations', default=int(4e4), type=int)
     return ap
 
 
@@ -91,6 +87,6 @@ if __name__ == '__main__':
     # construct network
     net = None
     # training
-    net = run_training(net, train, iterations=ap.iterations)
+    net = (net, train)
     # saving the network
     save(net)
