@@ -367,8 +367,7 @@ def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixel
     # gathering the training data
     _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
-                            corpora=corpora,
-                            cluster=False)
+                            corpora=corpora)
     # setting up the (baseline-) model
     model = Tesseract()
 
@@ -393,8 +392,9 @@ if __name__ ==  '__main__':
     ap = arg_parser().parse_args()
     corpus_ids = [int(c) for c in ap.corpus_ids]
     corpora = [ALL_CORPORA[i] for i in corpus_ids]
-    #if ap.model_type == 'Baseline3':
-    #    run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
-    #elif ap.model_type == 'Kraken':
-    #    run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
-    run_evaluation_tesseract(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    if ap.model_type == 'Baseline3':
+        run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    elif ap.model_type == 'Kraken':
+        run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    elif ap.model_type == 'Tesseract':
+        run_evaluation_tesseract(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
