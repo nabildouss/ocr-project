@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 from argparse import ArgumentParser
 import torch
@@ -270,7 +271,8 @@ class Evaluator:
             it_count += 1
             #if it_count > 10:
             #    break
-        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer])
+        data = {'adj_wer': l_adj_wer, 'adj_cer': l_adj_cer}
+        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data
 
 
 def arg_parser():
@@ -305,7 +307,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    wer, adj_wer, cer, adj_cer = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -313,6 +315,8 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
         os.makedirs(os.path.dirname(pth_out))
     with open(pth_out, 'w') as f_out:
         json.dump(summary, f_out)
+    with open(pth_out + '_data.pkl', 'wb') as f_data:
+        pickle.dump(data, f_data)
     # finally printing the results
     print(summary)
 
@@ -334,7 +338,7 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    wer, adj_wer, cer, adj_cer = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -342,6 +346,8 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
         os.makedirs(os.path.dirname(pth_out))
     with open(pth_out, 'w') as f_out:
         json.dump(summary, f_out)
+    with open(pth_out + '_data.pkl', 'wb') as f_data:
+        pickle.dump(data, f_data)
     # finally printing the results
     print(summary)
 

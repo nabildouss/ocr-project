@@ -26,7 +26,7 @@ def show(x, outfile=None):
 
 
 def load_data(data_set='GT4HistOCR', transformation=None, n_train=None, n_test=None, corpora=data.ALL_CORPORA
-              , alphabet=None, cluster=None):
+              , alphabet=None, cluster=True):
     """
     Generates the data sets
 
