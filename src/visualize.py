@@ -18,40 +18,46 @@ def hist(data, bins=100, title='evaluation'):
     f.suptitle(title)
     ax1.set_xlabel('CER')
     ax1.set_ylabel('percentage of test images')
-    p_wer = sns.histplot(data=wer, kde=True, ax=ax1, bins=bins, stat='probability')
+    p_wer = sns.histplot(data=wer, kde=False, ax=ax1, bins=bins, stat='probability')
     ax2.set_xlabel('WER')
     ax2.set_ylabel('percentage of test images')
-    p_cer = sns.histplot(data=cer, kde=True, ax=ax2, bins=bins, stat='probability')
+    p_cer = sns.histplot(data=cer, kde=False, ax=ax2, bins=bins, stat='probability')
     return p_wer, p_cer
 
 
-def images_wer(data, dset, model=None, n_samples=4, title='evalutation'):
-    wer = data['adj_wer']
+def images(data, dset, model=None, n_samples=4, title='evalutation'):
     f, axs = plt.subplots(n_samples, 3, figsize=[12, 1.5*n_samples])#, gridspec_kw={'wspace': 0, 'hspace': 0})
     f.suptitle(title)
     axs[0][0].set_title('best')
     axs[0][1].set_title('meadian')
     axs[0][2].set_title('worst')
 
-    wer_median = np.median(wer)
-    wer_s_idcs = np.argsort(wer)
-    wer_best_idcs = wer_s_idcs[:n_samples]
-    wer_worst_idcs = wer_s_idcs[-n_samples:]
-    wer_median_idcs = np.abs(np.argsort(wer - wer_median))[:n_samples]
+    median = np.median(data)
+    s_idcs = np.argsort(data)
+    best_idcs = s_idcs[:n_samples]
+    worst_idcs = s_idcs[-n_samples:]
+    median_idcs = np.abs(np.argsort(data - median))[:n_samples]
 
     resize = Resize([64, 512])
     for i, row in enumerate(axs):
-        img_best = resize(dset[wer_best_idcs[i]][0])
+        img_best = resize(dset[best_idcs[i]][0])
         row[0].axis('off')
         row[0].imshow(img_best[0], cmap='bone', aspect='auto')
-        img_meadian = resize(dset[wer_median_idcs[i]][0])
+        img_meadian = resize(dset[median_idcs[i]][0])
         row[1].axis('off')
         row[1].imshow(img_meadian[0], cmap='bone', aspect='auto')
-        img_worst = resize(dset[wer_worst_idcs[i]][0])
+        img_worst = resize(dset[worst_idcs[i]][0])
         row[2].axis('off')
         row[2].imshow(img_worst[0], cmap='bone', aspect='auto')
     return axs
 
+
+def images_wer(data, dset, model=None, n_samples=4, title='evalutation'):
+    images(data['adj_wer'], dset, model, n_samples, title=f'{title}: WER')
+
+
+def images_cer(data, dset, model=None, n_samples=4, title='evalutation'):
+    images(data['adj_cer'], dset, model, n_samples, title=f'{title}: CER')
 
 
 def plot_all():
@@ -68,7 +74,7 @@ def parser():
 
 
 if __name__ == '__main__':
-    arr1 = np.random.random(2000)
+    arr1 = np.arange(2000)
     arr2 = np.random.random(2000)
     data = {'adj_wer': arr1, 'adj_cer': arr2}
 
@@ -79,5 +85,7 @@ if __name__ == '__main__':
 
         hist(data, title=f'CLSTM: {corpora[0]}')
         plt.show()
-        images_wer(data, test)
+        images_wer(data, test, title=f'CLSTM: {corpora[0]}')
+        plt.show()
+        images_cer(data, test, title=f'CLSTM: {corpora[0]}')
         plt.show()
