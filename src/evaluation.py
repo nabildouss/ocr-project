@@ -12,6 +12,7 @@ from src.baseline import *
 from src.data import *
 import src.milestone1 as ms1
 from src import ctc_decoder
+from src.Tesseract import *
 import tqdm
 
 
@@ -223,13 +224,14 @@ def CTC_to_int(y_TNS):
 
 class Evaluator:
 
-    def __init__(self, model, dset, device, s_batch=16, prog_bar=True, n_workers=4):
+    def __init__(self, model, dset, device, s_batch=16, prog_bar=True, n_workers=4, tesseract=False):
         self.model = model
         self.dset = dset
         self.device = device
         self.s_batch = s_batch
         self.prog_bar = prog_bar
         self.n_workers = n_workers
+        self.tesseract = tesseract
 
     def eval(self):
         self.model.eval()
@@ -255,11 +257,18 @@ class Evaluator:
             y = self.model(batch)
             #hypotheses = CTC_to_int(y)
             hypotheses = []
-            for i in range(y.shape[1]):
-                P = y[:, i]
-                hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
+            if self.tesseract:
+                hypotheses = y
+            else:
+                for i in range(y.shape[1]):
+                    P = y[:, i]
+                    hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
             for h, r in zip(hypotheses, gt):
-                hyp, ref = map(self.dset.embedding_to_word, [h, r])
+                if self.tesseract:
+                    ref = self.dset.embedding_to_word(r)
+                    hyp = h
+                else:
+                    hyp, ref = map(self.dset.embedding_to_word, [h, r])
                 if it_count % 100 == 0:
                     print(f'hyp: {hyp}\nref: {ref}\n')
                 l_wer.append(wer(ref, hyp))
@@ -351,12 +360,41 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     # finally printing the results
     print(summary)
 
+def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
+    if pth_out is not None:
+        if not os.path.isdir(os.path.dirname(pth_out)):
+            os.makedirs(os.path.dirname(pth_out))
+    # gathering the training data
+    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+                            transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
+                            corpora=corpora,
+                            cluster=False)
+    # setting up the (baseline-) model
+    model = Tesseract()
+
+    # setting up the evaluation
+    evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar, tesseract=True)
+    # evaluating the model
+    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    # setting up a dictionary to summariza evalutation
+    summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
+    # storing the dictionary as a JSON file
+    if not  os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    with open(pth_out, 'w') as f_out:
+        json.dump(summary, f_out)
+    with open(pth_out + '_data.pkl', 'wb') as f_data:
+        pickle.dump(data, f_data)
+    # finally printing the results
+    print(summary)
+
 
 if __name__ ==  '__main__':
     ap = arg_parser().parse_args()
     corpus_ids = [int(c) for c in ap.corpus_ids]
     corpora = [ALL_CORPORA[i] for i in corpus_ids]
-    if ap.model_type == 'Baseline3':
-        run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
-    elif ap.model_type == 'Kraken':
-        run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    #if ap.model_type == 'Baseline3':
+    #    run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    #elif ap.model_type == 'Kraken':
+    #    run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    run_evaluation_tesseract(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
