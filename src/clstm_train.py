@@ -1,3 +1,4 @@
+import torch
 from argparse import ArgumentParser
 from numpy import array, zeros
 import tqdm
@@ -68,12 +69,12 @@ def run_training(net, dset, n_workers=4, iterations=4e4):
             if it_count >= iterations:
                 break
             if it_count % 50 == 0:
-                #hyp = ctc_decoder.decode(y[:, 0, :].detach().cpu().numpy())
+                hyp = ctc_decoder.decode(y_pred.reshape(-1, noutput))
                 gt_transcript = targets[:l_targets[0]].detach().cpu().numpy()
-                #hyp = torch.tensor(hyp)
+                hyp = torch.tensor(hyp)
                 gt_transcript = torch.tensor(gt_transcript)
                 print('')
-                #print(f'hypthesis: "{dset.embedding_to_word(hyp)}"\ngt: "{dset.embedding_to_word(gt_transcript)}"')
+                print(f'hypthesis: "{dset.embedding_to_word(hyp)}"\ngt:        "{dset.embedding_to_word(gt_transcript)}"')
     return net
 
 
