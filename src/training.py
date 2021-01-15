@@ -184,7 +184,7 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
     train, _ = ms1.load_data(data_set,
                              transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
                              corpora=corpora,
-                             cluster=True)
+                             cluster=False)
     #from src.example import ToyData, to_str
     #train = ToyData('toydata')
     #train.batch_transform = train.collate
@@ -211,8 +211,8 @@ if __name__ == '__main__':
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-                   out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
-    #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+    #run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+                   out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
 
