@@ -36,6 +36,7 @@ def run_eval(net, dset, n_workers=4):
     l_cer = []
     l_adj_wer = []
     l_adj_cer = []
+    preds = []
     it_count = 0
     prog_bar = tqdm.tqdm(total=len(dset))
     for batch, targets, l_targets in dloader:
@@ -56,6 +57,7 @@ def run_eval(net, dset, n_workers=4):
         gt_transcript = torch.tensor(gt_transcript)
         hyp = dset.embedding_to_word(hyp)
         ref = dset.embedding_to_word(gt_transcript)
+        preds.append(hyp)
         l_wer.append(wer(ref, hyp))
         l_cer.append(cer(ref, hyp))
         l_adj_wer.append(adjusted_cer(ref, hyp))
@@ -64,7 +66,7 @@ def run_eval(net, dset, n_workers=4):
         it_count += 1
         prog_bar.update(1)
     data = {'adj_wer': l_adj_wer, 'adj_cer': l_adj_cer}
-    return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data
+    return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data, preds
 
 
 def load(p_out):
@@ -74,7 +76,7 @@ def load(p_out):
 
 def parser():
     ap = ArgumentParser()
-    ap.add_argument('--cstm_path', default='', type=str)
+    ap.add_argument('--clstm_path', default='', type=str)
     ap.add_argument('--corpus_id', default=1, type=int)
     ap.add_argument('--out', default='CLSTM_results/my_model.json', type=str)
     return ap
@@ -89,7 +91,7 @@ if __name__ == '__main__':
     # construct network
     ninput = 32
     noutput = len(test.character_classes)+1
-    net = load(ap.cstm_path)
+    net = load(ap.clstm_path)
     # evaluation
     (wer, adj_wer, cer, adj_cer), data = run_eval(net, test)
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
