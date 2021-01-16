@@ -12,6 +12,7 @@ from src.baseline import *
 from src.data import *
 import src.milestone1 as ms1
 from src import ctc_decoder
+from src.Tesseract import *
 import tqdm
 
 
@@ -223,13 +224,14 @@ def CTC_to_int(y_TNS):
 
 class Evaluator:
 
-    def __init__(self, model, dset, device, s_batch=16, prog_bar=True, n_workers=4):
+    def __init__(self, model, dset, device, s_batch=16, prog_bar=True, n_workers=4, tesseract=False):
         self.model = model
         self.dset = dset
         self.device = device
         self.s_batch = s_batch
         self.prog_bar = prog_bar
         self.n_workers = n_workers
+        self.tesseract = tesseract
 
     def eval(self):
         self.model.eval()
@@ -242,6 +244,7 @@ class Evaluator:
         l_cer = []
         l_adj_wer = []
         l_adj_cer = []
+        preds = []
         it_count = 0
         for batch, targets, l_targets in dloader:
             # moving the data to the (GPU-) device
@@ -255,13 +258,21 @@ class Evaluator:
             y = self.model(batch)
             #hypotheses = CTC_to_int(y)
             hypotheses = []
-            for i in range(y.shape[1]):
-                P = y[:, i]
-                hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
+            if self.tesseract:
+                hypotheses = y
+            else:
+                for i in range(y.shape[1]):
+                    P = y[:, i]
+                    hypotheses.append(ctc_decoder.decode(P.detach().cpu().numpy()))
             for h, r in zip(hypotheses, gt):
-                hyp, ref = map(self.dset.embedding_to_word, [h, r])
+                if self.tesseract:
+                    ref = self.dset.embedding_to_word(r)
+                    hyp = h
+                else:
+                    hyp, ref = map(self.dset.embedding_to_word, [h, r])
                 if it_count % 100 == 0:
                     print(f'hyp: {hyp}\nref: {ref}\n')
+                preds.append(hyp)
                 l_wer.append(wer(ref, hyp))
                 l_cer.append(cer(ref, hyp))
                 l_adj_wer.append(adjusted_cer(ref, hyp))
@@ -272,7 +283,7 @@ class Evaluator:
             #if it_count > 10:
             #    break
         data = {'adj_wer': l_adj_wer, 'adj_cer': l_adj_cer}
-        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data
+        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data, preds
 
 
 def arg_parser():
@@ -295,9 +306,9 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     if not os.path.isdir(os.path.dirname(pth_out)):
         os.makedirs(os.path.dirname(pth_out))
     # gathering the training data
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    _, test = ms1.load_data(data_set,
                              transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
-                             corpora=corpora)
+                             corpora=corpora, cluster=False)
     # setting up the (baseline-) model
     model = BaseLine3(n_char_class=len(test.character_classes)+1, shape_in=(1, pixels, pixels*seq_len),
                       sequence_length=seq_len)
@@ -307,7 +318,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -317,6 +328,8 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
         json.dump(summary, f_out)
     with open(pth_out + '_data.pkl', 'wb') as f_data:
         pickle.dump(data, f_data)
+    with open(pth_out + '_preds.pkl', 'wb') as f_data:
+        pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
 
@@ -327,9 +340,9 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     if not os.path.isdir(os.path.dirname(pth_out)):
         os.makedirs(os.path.dirname(pth_out))
     # gathering the training data
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
-                            corpora=corpora)
+                            corpora=corpora, cluster=False)
     # setting up the (baseline-) model
     model = Kraken(n_char_class=len(test.character_classes)+1)
     # loading the model
@@ -338,7 +351,36 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
+    # setting up a dictionary to summariza evalutation
+    summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
+    # storing the dictionary as a JSON file
+    if not  os.path.isdir(os.path.dirname(pth_out)):
+        os.makedirs(os.path.dirname(pth_out))
+    with open(pth_out, 'w') as f_out:
+        json.dump(summary, f_out)
+    with open(pth_out + '_data.pkl', 'wb') as f_data:
+        pickle.dump(data, f_data)
+    with open(pth_out + '_preds.pkl', 'wb') as f_data:
+        pickle.dump(preds, f_data)
+    # finally printing the results
+    print(summary)
+
+def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
+    if pth_out is not None:
+        if not os.path.isdir(os.path.dirname(pth_out)):
+            os.makedirs(os.path.dirname(pth_out))
+    # gathering the training data
+    _, test = ms1.load_data(data_set,
+                            transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
+                            corpora=corpora)
+    # setting up the (baseline-) model
+    model = Tesseract()
+
+    # setting up the evaluation
+    evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar, tesseract=True)
+    # evaluating the model
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -360,3 +402,5 @@ if __name__ ==  '__main__':
         run_evaluation_baseline3(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
     elif ap.model_type == 'Kraken':
         run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+    elif ap.model_type == 'Tesseract':
+        run_evaluation_tesseract(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
