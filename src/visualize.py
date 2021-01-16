@@ -3,7 +3,12 @@ from argparse import ArgumentParser
 import numpy as np
 import pickle
 import matplotlib as plt
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.evaluation import *
+from src.baseline import *
 from src.data import *
 import src.milestone1 as ms1
 import matplotlib.pyplot as plt
@@ -26,20 +31,27 @@ def hist(data, bins=100, title='evaluation'):
 
 
 def images(data, dset, model=None, n_samples=4, title='evalutation'):
-    f, axs = plt.subplots(n_samples, 3, figsize=[12, 1.5*n_samples])#, gridspec_kw={'wspace': 0, 'hspace': 0})
+    #if model is None:
+    f, axs = plt.subplots(n_samples+1, 3, figsize=[18, 1.5*(n_samples+1)])#, gridspec_kw={'wspace': 0, 'hspace': 0})
+    #else:
+    #    f, axs = plt.subplots(2*n_samples, 3, figsize=[18, 1.5*n_samples])#, gridspec_kw={'wspace': 0, 'hspace': 0})
     f.suptitle(title)
-    axs[0][0].set_title('best')
-    axs[0][1].set_title('meadian')
-    axs[0][2].set_title('worst')
+    f.tight_layout(rect=[0, 0.03, 1, 0.95])
+    axs[0][0].text(0.5, 0.5, 'best', horizontalalignment='center', verticalalignment='center', fontsize=24)
+    axs[0][0].axis('off')
+    axs[0][1].text(0.5, 0.5, 'median', horizontalalignment='center', verticalalignment='center', fontsize=24)
+    axs[0][1].axis('off')
+    axs[0][2].text(0.5, 0.5, 'worst', horizontalalignment='center', verticalalignment='center', fontsize=24)
+    axs[0][2].axis('off')
 
     median = np.median(data)
     s_idcs = np.argsort(data)
     best_idcs = s_idcs[:n_samples]
     worst_idcs = s_idcs[-n_samples:]
-    median_idcs = np.abs(np.argsort(data - median))[:n_samples]
+    median_idcs = np.argsort(np.abs(data - median))[:n_samples]
 
-    resize = Resize([64, 512])
-    for i, row in enumerate(axs):
+    resize = Resize([64, 720])
+    for i, row in enumerate(axs[1:]):
         img_best = resize(dset[best_idcs[i]][0])
         row[0].axis('off')
         row[0].imshow(img_best[0], cmap='bone', aspect='auto')
@@ -49,19 +61,41 @@ def images(data, dset, model=None, n_samples=4, title='evalutation'):
         img_worst = resize(dset[worst_idcs[i]][0])
         row[2].axis('off')
         row[2].imshow(img_worst[0], cmap='bone', aspect='auto')
+        if model is not None:
+            if isinstance(model, BaseLine3) or isinstance(model, Kraken):
+                hyp_best = pred_baseline_models(torch.stack([dset[best_idcs[i]][0]]), model, dset)
+                hyp_median = pred_baseline_models(torch.stack([dset[median_idcs[i]][0]]), model, dset)
+                hyp_worst = pred_baseline_models(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
+            else:
+                hyp_best = pred_clstm(torch.stack([dset[best_idcs[i]][0]]), model, dset)
+                hyp_median = pred_clstm(torch.stack([dset[median_idcs[i]][0]]), model, dset)
+                hyp_worst = pred_clstm(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
+            row[0].set_title(hyp_best)
+            row[1].set_title(hyp_median)
+            row[2].set_title(hyp_worst)
     return axs
 
 
-def images_wer(data, dset, model=None, n_samples=4, title='evalutation'):
-    images(data['adj_wer'], dset, model, n_samples, title=f'{title}: WER')
+def images_wer(data, dset, model=None, n_samples=1, title='evalutation'):
+    images(data['adj_wer'], dset, model, n_samples, title=f'{title} WER')
 
 
-def images_cer(data, dset, model=None, n_samples=4, title='evalutation'):
-    images(data['adj_cer'], dset, model, n_samples, title=f'{title}: CER')
+def images_cer(data, dset, model=None, n_samples=1, title='evalutation'):
+    images(data['adj_cer'], dset, model, n_samples, title=f'{title} CER')
 
 
-def plot_all():
-    pass
+def plot_all(data, test, pfx, corpus, dir_out, model=None):
+    if not os.path.isdir(dir_out):
+        os.makedirs(dir_out)
+    plt.tight_layout()
+    hist(data, title=f'{pfx}: {corpus.value}')
+    plt.savefig(os.path.join(dir_out, f'{pfx}: {corpus.value}_hist'))
+
+    images_wer(data, test, title=f'{pfx}: {corpus.value}', model=model)
+    plt.savefig(os.path.join(dir_out, f'{pfx}: {corpus.value}_imgsWER'))
+
+    images_cer(data, test, title=f'{pfx}: {corpus.value}', model=model)
+    plt.savefig(os.path.join(dir_out, f'{pfx}: {corpus.value}_imgsCER'))
 
 
 def parser():
@@ -70,22 +104,66 @@ def parser():
     ap.add_argument('--data', default=None, type=str)
     ap.add_argument('--model', default=None, type=str)
     ap.add_argument('--model_type', default='clstm', type=str)
+    ap.add_argument('--dir_out', default='CLSTM_plots', type=str)
     return ap
 
 
+def pred_clstm(batch, net, dset):
+    x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
+    scale_factor = 32 / x_in.shape[1]
+    x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+    x_in = x_in[:, :, None]
+    net.inputs.aset(x_in)
+    y_pred = net.outputs.array()
+    hyp = ctc_decoder.decode(y_pred.reshape(-1, len(dset.char_classes)+1))
+    hyp = torch.tensor(hyp)
+    hyp = dset.embedding_to_word(hyp)
+    return hyp
+
+
+def pred_baseline_models(batch, net, dset):
+    y_pred = net(batch)
+    hyp = ctc_decoder.decode(y_pred[:, 0].cpu().detach().numpy())
+    hyp = torch.tensor(hyp)
+    hyp = dset.embedding_to_word(hyp)
+    return hyp
+
+
 if __name__ == '__main__':
-    arr1 = np.arange(2000)
-    arr2 = np.random.random(2000)
-    data = {'adj_wer': arr1, 'adj_cer': arr2}
-
     ap = parser().parse_args()
+    data = pickle.load(open(ap.data, 'rb'))#{'adj_wer': arr1, 'adj_cer': arr2}
+    corpora = [ALL_CORPORA[ap.corpus_id]]
+    _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
+    model = None
     if ap.model_type == 'clstm':
-        corpora = [ALL_CORPORA[ap.corpus_id]]
-        _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
-
-        hist(data, title=f'CLSTM: {corpora[0]}')
-        plt.show()
-        images_wer(data, test, title=f'CLSTM: {corpora[0]}')
-        plt.show()
-        images_cer(data, test, title=f'CLSTM: {corpora[0]}')
-        plt.show()
+        pfx = 'CLSTM'
+        if ap.model is not None:
+            import clstm
+            model = clstm.load_net(ap.model)
+    elif ap.model_type == 'baseline':
+        pfx = 'Sliding Windows'
+        if ap.model is not None:
+            model = BaseLine3()
+            # setting up the (baseline-) model
+            _, test = ms1.load_data(transformation=Compose([Resize([32, 32 * 256]), ToTensor()]),
+                                    corpora=corpora, cluster=False)
+            # setting up the (baseline-) model
+            model = BaseLine3(n_char_class=len(test.character_classes) + 1, shape_in=(1, 32, 32 * 256),
+                              sequence_length=256)
+            # loading the model
+            state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
+            model.load_state_dict(state_dict=state_dict)
+            model.eval()
+    elif ap.model_type == 'kraken':
+        pfx = 'Lightweight Model'
+        # setting up the (baseline-) model
+        _, test = ms1.load_data(transformation=Compose([Resize([48, 4 * 256]), ToTensor()]),
+                                corpora=corpora, cluster=False)
+        model = Kraken(n_char_class=len(test.character_classes) + 1)
+        # loading the model
+        state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
+        model.load_state_dict(state_dict=state_dict)
+        model.eval()
+    else:
+        raise ValueError(f'unkown model type {ap.model_type}')
+    plot_all(data, test, pfx, corpora[0], ap.dir_out, model=model)

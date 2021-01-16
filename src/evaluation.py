@@ -244,6 +244,7 @@ class Evaluator:
         l_cer = []
         l_adj_wer = []
         l_adj_cer = []
+        preds = []
         it_count = 0
         for batch, targets, l_targets in dloader:
             # moving the data to the (GPU-) device
@@ -271,6 +272,7 @@ class Evaluator:
                     hyp, ref = map(self.dset.embedding_to_word, [h, r])
                 if it_count % 100 == 0:
                     print(f'hyp: {hyp}\nref: {ref}\n')
+                preds.append(hyp)
                 l_wer.append(wer(ref, hyp))
                 l_cer.append(cer(ref, hyp))
                 l_adj_wer.append(adjusted_cer(ref, hyp))
@@ -281,7 +283,7 @@ class Evaluator:
             #if it_count > 10:
             #    break
         data = {'adj_wer': l_adj_wer, 'adj_cer': l_adj_cer}
-        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data
+        return map(np.mean, [l_wer, l_adj_wer, l_cer, l_adj_cer]), data, preds
 
 
 def arg_parser():
@@ -304,7 +306,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     if not os.path.isdir(os.path.dirname(pth_out)):
         os.makedirs(os.path.dirname(pth_out))
     # gathering the training data
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    _, test = ms1.load_data(data_set,
                              transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
                              corpora=corpora)
     # setting up the (baseline-) model
@@ -316,7 +318,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -326,6 +328,8 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
         json.dump(summary, f_out)
     with open(pth_out + '_data.pkl', 'wb') as f_data:
         pickle.dump(data, f_data)
+    with open(pth_out + '_preds.pkl', 'wb') as f_data:
+        pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
 
@@ -336,7 +340,7 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     if not os.path.isdir(os.path.dirname(pth_out)):
         os.makedirs(os.path.dirname(pth_out))
     # gathering the training data
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
                             corpora=corpora)
     # setting up the (baseline-) model
@@ -347,7 +351,7 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar)
     # evaluating the model
-    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
@@ -357,6 +361,8 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
         json.dump(summary, f_out)
     with open(pth_out + '_data.pkl', 'wb') as f_data:
         pickle.dump(data, f_data)
+    with open(pth_out + '_preds.pkl', 'wb') as f_data:
+        pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
 
@@ -365,7 +371,7 @@ def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixel
         if not os.path.isdir(os.path.dirname(pth_out)):
             os.makedirs(os.path.dirname(pth_out))
     # gathering the training data
-    _, test = ms1.load_data(data_set, n_train=0.75, n_test=0.25,
+    _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
                             corpora=corpora)
     # setting up the (baseline-) model
@@ -374,7 +380,7 @@ def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixel
     # setting up the evaluation
     evaluator = Evaluator(model, test, device, s_batch=s_batch, prog_bar=prog_bar, tesseract=True)
     # evaluating the model
-    (wer, adj_wer, cer, adj_cer), data = evaluator.eval()
+    (wer, adj_wer, cer, adj_cer), data, preds = evaluator.eval()
     # setting up a dictionary to summariza evalutation
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
