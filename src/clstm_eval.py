@@ -100,7 +100,7 @@ if __name__ == '__main__':
         os.makedirs(os.path.dirname(ap.out))
     with open(ap.out, 'w') as f_out:
         json.dump(summary, f_out)
-    with open(ap.out+ '_data.pkl', 'wb') as f_data:
+    with open(ap.out + '_data.pkl', 'wb') as f_data:
         pickle.dump(data, f_data)
     with open(ap.out + '_preds.pkl', 'wb') as f_data:
         pickle.dump(preds, f_data)
