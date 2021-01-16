@@ -62,14 +62,17 @@ def images(data, dset, model=None, n_samples=4, title='evalutation'):
         row[2].axis('off')
         row[2].imshow(img_worst[0], cmap='bone', aspect='auto')
         if model is not None:
-            if isinstance(model, BaseLine3) or isinstance(model, Kraken):
-                hyp_best = pred_baseline_models(torch.stack([dset[best_idcs[i]][0]]), model, dset)
-                hyp_median = pred_baseline_models(torch.stack([dset[median_idcs[i]][0]]), model, dset)
-                hyp_worst = pred_baseline_models(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
-            else:
-                hyp_best = pred_clstm(torch.stack([dset[best_idcs[i]][0]]), model, dset)
-                hyp_median = pred_clstm(torch.stack([dset[median_idcs[i]][0]]), model, dset)
-                hyp_worst = pred_clstm(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
+            hyp_best = model[best_idcs[i]]
+            hyp_median = model[median_idcs[i]]
+            hyp_worst = model[worst_idcs[i]]
+            # if isinstance(model, BaseLine3) or isinstance(model, Kraken):
+            #     hyp_best = pred_baseline_models(torch.stack([dset[best_idcs[i]][0]]), model, dset)
+            #     hyp_median = pred_baseline_models(torch.stack([dset[median_idcs[i]][0]]), model, dset)
+            #     hyp_worst = pred_baseline_models(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
+            # else:
+            #     hyp_best = pred_clstm(torch.stack([dset[best_idcs[i]][0]]), model, dset)
+            #     hyp_median = pred_clstm(torch.stack([dset[median_idcs[i]][0]]), model, dset)
+            #     hyp_worst = pred_clstm(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
             row[0].set_title(hyp_best)
             row[1].set_title(hyp_median)
             row[2].set_title(hyp_worst)
@@ -108,25 +111,25 @@ def parser():
     return ap
 
 
-def pred_clstm(batch, net, dset):
-    x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
-    scale_factor = 32 / x_in.shape[1]
-    x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
-    x_in = x_in[:, :, None]
-    net.inputs.aset(x_in)
-    y_pred = net.outputs.array()
-    hyp = ctc_decoder.decode(y_pred.reshape(-1, len(dset.char_classes)+1))
-    hyp = torch.tensor(hyp)
-    hyp = dset.embedding_to_word(hyp)
-    return hyp
-
-
-def pred_baseline_models(batch, net, dset):
-    y_pred = net(batch)
-    hyp = ctc_decoder.decode(y_pred[:, 0].cpu().detach().numpy())
-    hyp = torch.tensor(hyp)
-    hyp = dset.embedding_to_word(hyp)
-    return hyp
+# def pred_clstm(batch, net, dset):
+#     x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
+#     scale_factor = 32 / x_in.shape[1]
+#     x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+#     x_in = x_in[:, :, None]
+#     net.inputs.aset(x_in)
+#     y_pred = net.outputs.array()
+#     hyp = ctc_decoder.decode(y_pred.reshape(-1, len(dset.char_classes)+1))
+#     hyp = torch.tensor(hyp)
+#     hyp = dset.embedding_to_word(hyp)
+#     return hyp
+#
+#
+# def pred_baseline_models(batch, net, dset):
+#     y_pred = net(batch)
+#     hyp = ctc_decoder.decode(y_pred[:, 0].cpu().detach().numpy())
+#     hyp = torch.tensor(hyp)
+#     hyp = dset.embedding_to_word(hyp)
+#     return hyp
 
 
 if __name__ == '__main__':
@@ -134,36 +137,34 @@ if __name__ == '__main__':
     data = pickle.load(open(ap.data, 'rb'))#{'adj_wer': arr1, 'adj_cer': arr2}
     corpora = [ALL_CORPORA[ap.corpus_id]]
     _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
-    model = None
+    preds = None
+    if ap.model is not None:
+        preds = pickle.load(open(ap.model, 'rb'))
     if ap.model_type == 'clstm':
         pfx = 'CLSTM'
-        if ap.model is not None:
-            import clstm
-            model = clstm.load_net(ap.model)
     elif ap.model_type == 'baseline':
         pfx = 'Sliding Windows'
-        if ap.model is not None:
-            model = BaseLine3()
-            # setting up the (baseline-) model
-            _, test = ms1.load_data(transformation=Compose([Resize([32, 32 * 256]), ToTensor()]),
-                                    corpora=corpora, cluster=False)
-            # setting up the (baseline-) model
-            model = BaseLine3(n_char_class=len(test.character_classes) + 1, shape_in=(1, 32, 32 * 256),
-                              sequence_length=256)
-            # loading the model
-            state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
-            model.load_state_dict(state_dict=state_dict)
-            model.eval()
+            #model = BaseLine3()
+            ## setting up the (baseline-) model
+            #_, test = ms1.load_data(transformation=Compose([Resize([32, 32 * 256]), ToTensor()]),
+            #                        corpora=corpora, cluster=False)
+            ## setting up the (baseline-) model
+            #model = BaseLine3(n_char_class=len(test.character_classes) + 1, shape_in=(1, 32, 32 * 256),
+            #                  sequence_length=256)
+            ## loading the model
+            #state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
+            #model.load_state_dict(state_dict=state_dict)
+            #model.eval()
     elif ap.model_type == 'kraken':
         pfx = 'Lightweight Model'
         # setting up the (baseline-) model
-        _, test = ms1.load_data(transformation=Compose([Resize([48, 4 * 256]), ToTensor()]),
-                                corpora=corpora, cluster=False)
-        model = Kraken(n_char_class=len(test.character_classes) + 1)
-        # loading the model
-        state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
-        model.load_state_dict(state_dict=state_dict)
-        model.eval()
+        #_, test = ms1.load_data(transformation=Compose([Resize([48, 4 * 256]), ToTensor()]),
+                                #corpora=corpora, cluster=False)
+        #model = Kraken(n_char_class=len(test.character_classes) + 1)
+        ## loading the model
+        #state_dict = torch.load(ap.model, map_location=torch.device('cpu'))
+        #model.load_state_dict(state_dict=state_dict)
+        #model.eval()
     else:
         raise ValueError(f'unkown model type {ap.model_type}')
-    plot_all(data, test, pfx, corpora[0], ap.dir_out, model=model)
+    plot_all(data, test, pfx, corpora[0], ap.dir_out, model=preds)

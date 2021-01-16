@@ -29,7 +29,7 @@ def mktarget(transcript, noutput):
 
 
 def run_eval(net, dset, n_workers=4):
-    dloader = DataLoader(dset, batch_size=1, num_workers=n_workers, shuffle=True,
+    dloader = DataLoader(dset, batch_size=1, num_workers=n_workers, shuffle=False,
                          collate_fn=dset.batch_transform)
     noutput = len(dset.character_classes)+1
     l_wer = []
@@ -39,7 +39,7 @@ def run_eval(net, dset, n_workers=4):
     preds = []
     it_count = 0
     prog_bar = tqdm.tqdm(total=len(dset))
-    for batch, targets, l_targets in dloader:
+    for i, (batch, targets, l_targets) in enumerate(dloader):
         # conversion to CLSTM framework inputs
         x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
         scale_factor = 32 / x_in.shape[1]
