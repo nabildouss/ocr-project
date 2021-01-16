@@ -93,14 +93,16 @@ if __name__ == '__main__':
     noutput = len(test.character_classes)+1
     net = load(ap.clstm_path)
     # evaluation
-    (wer, adj_wer, cer, adj_cer), data = run_eval(net, test)
+    (wer, adj_wer, cer, adj_cer), data, preds = run_eval(net, test)
     summary = {'wer': wer, 'adj_wer': adj_wer, 'cer': cer, 'adj_cer': cer}
     # storing the dictionary as a JSON file
     if not  os.path.isdir(os.path.dirname(ap.out)):
         os.makedirs(os.path.dirname(ap.out))
     with open(ap.out, 'w') as f_out:
         json.dump(summary, f_out)
-    with open(pth_out + '_data.pkl', 'wb') as f_data:
+    with open(ap.out+ '_data.pkl', 'wb') as f_data:
+        pickle.dump(data, f_data)
+    with open(ap.out + '_data.pkl', 'wb') as f_data:
         pickle.dump(data, f_data)
     # finally printing the results
     print(summary)
