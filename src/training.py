@@ -208,9 +208,7 @@ def run_training_kraken(iterations, data_set, batch_size, device, out, prog_bar,
     torch.save(trainer.model.state_dict(), out)
 
 
-
-
-if __name__ == '__main__':
+def main_method(model='sw'):
     ap = arg_parser().parse_args()
     corpus_ids = [int(c) for c in ap.corpus_ids]
     corpora = [ALL_CORPORA[i] for i in corpus_ids]
@@ -218,8 +216,17 @@ if __name__ == '__main__':
     #               out=ap.out,  prog_bar=ap.prog_bar)
     #run_training_2(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
     #               out=ap.out,  prog_bar=ap.prog_bar)
-    run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-                   out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
-    #run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
-    #               out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    if model == 'sw':
+        run_training_3(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+                       out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    elif model == 'lightweight':
+        run_training_kraken(iterations=ap.iterations,  data_set=ap.data_set, batch_size=ap.batch_size, device=ap.device,
+                            out=ap.out,  prog_bar=ap.prog_bar, corpora=corpora)
+    else:
+        raise ValueError(f'model{model} unknown')
+    return ap
 
+
+
+if __name__ == '__main__':
+    main_method('sw')

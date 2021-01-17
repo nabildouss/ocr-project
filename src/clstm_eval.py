@@ -81,10 +81,7 @@ def parser():
     ap.add_argument('--out', default='CLSTM_results/my_model.json', type=str)
     return ap
 
-
-if __name__ == '__main__':
-    # argument parsing
-    ap = parser().parse_args()
+def main_method(ap):
     corpora = [ALL_CORPORA[ap.corpus_id]]
     _, test = ms1.load_data(corpora=corpora, cluster=True, transformation=Compose([ToTensor()]))
     #_, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
@@ -106,3 +103,9 @@ if __name__ == '__main__':
         pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
+    return preds
+
+if __name__ == '__main__':
+    # argument parsing
+    ap = parser().parse_args()
+    main_method(ap)

@@ -93,7 +93,7 @@ def parser():
     return ap
 
 
-if __name__ == '__main__':
+def main_method():
     # argument parsing
     ap = parser().parse_args()
     corpora = [ALL_CORPORA[ap.corpus_id]]
@@ -108,3 +108,8 @@ if __name__ == '__main__':
     net = run_training(net, train, iterations=ap.iterations)
     # saving the network
     save(net, p_out=ap.out)
+    return ap
+
+if __name__ == '__main__':
+    main_method()
+

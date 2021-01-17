@@ -73,9 +73,9 @@ def images(data, dset, model=None, n_samples=4, title='evalutation'):
             #     hyp_best = pred_clstm(torch.stack([dset[best_idcs[i]][0]]), model, dset)
             #     hyp_median = pred_clstm(torch.stack([dset[median_idcs[i]][0]]), model, dset)
             #     hyp_worst = pred_clstm(torch.stack([dset[worst_idcs[i]][0]]), model, dset)
-            row[0].set_title(hyp_best)
-            row[1].set_title(hyp_median)
-            row[2].set_title(hyp_worst)
+            row[0].set_title(hyp_best, fontsize=12)
+            row[1].set_title(hyp_median, fontsize=12)
+            row[2].set_title(hyp_worst, fontsize=12)
     return axs
 
 

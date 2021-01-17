@@ -288,14 +288,14 @@ class Evaluator:
 
 def arg_parser():
     ap = ArgumentParser()
-    ap.add_argument('--model_type', default='Baseline3', type=str)
+    ap.add_argument('--model_type', default='Baseline3', type=str)#
     ap.add_argument('--corpus_ids', default='01234', type=str) # 0=EarlyModernLatin, 1=Kallimachos, 2=RIDGES_Fraktur, 3=RefCorpus_ENHG_Incunabula, 4=dta19
     ap.add_argument('--data_set', default='GT4HistOCR', type=str)
     ap.add_argument('--batch_size', default=4, type=int)
     ap.add_argument('--device', default='cpu', type=str)
     ap.add_argument('--prog_bar', default=True, type=bool)
-    ap.add_argument('--out', default=None)
-    ap.add_argument('--pth_model', default=None)
+    ap.add_argument('--out', default=None)#
+    ap.add_argument('--pth_model', default=None)#
     return ap
 
 
@@ -332,6 +332,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
         pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
+    return preds
 
 
 def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
@@ -365,6 +366,7 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
         pickle.dump(preds, f_data)
     # finally printing the results
     print(summary)
+    return preds
 
 def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixels=32, seq_len=256, corpora=ALL_CORPORA):
     if pth_out is not None:
@@ -392,10 +394,10 @@ def run_evaluation_tesseract(data_set, s_batch, device, prog_bar, pth_out, pixel
         pickle.dump(data, f_data)
     # finally printing the results
     print(summary)
+    return preds
 
 
-if __name__ ==  '__main__':
-    ap = arg_parser().parse_args()
+def main_method(ap):
     corpus_ids = [int(c) for c in ap.corpus_ids]
     corpora = [ALL_CORPORA[i] for i in corpus_ids]
     if ap.model_type == 'Baseline3':
@@ -404,3 +406,8 @@ if __name__ ==  '__main__':
         run_evaluation_kraken(ap.pth_model, ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
     elif ap.model_type == 'Tesseract':
         run_evaluation_tesseract(ap.data_set, ap.batch_size, ap.device, ap.prog_bar, ap.out, corpora=corpora)
+
+
+if __name__ ==  '__main__':
+    ap = arg_parser().parse_args()
+    main_methods(ap)
