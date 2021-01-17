@@ -1,4 +1,3 @@
-from argparse import ArgumentParser()
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -32,6 +31,16 @@ def train_apply(method='sw'):
 
 
 if __name__ == '__main__':
+    # NOTE: arg parsing is implicit either clstm_eval, clstm_tarain args parsing or training, evaluation args parsing
+
+    # uncomment to use sliding window model
+    # example: python3 train_apply.py --iterations=100000  --device=cpu  --batch_size=4 --out=models_100K_test/sw_0 --corpus_ids=0
     preds = train_apply('sw')
+
+    # uncomment to use lightweight model
+    # example: python3 train_apply.py --iterations=100000  --device=cpu  --batch_size=4 --out=models_100K_test/lw_0 --corpus_ids=0
     # preds = train_apply('lightweight')
+
+    # uncomment to use CLSTM model
+    # example: python3 train_apply.py --out=CLSTM_models_100K_test/clstm0.clstm --iterations=100000 --corpus_id=0
     # preds = train_apply('clstm')

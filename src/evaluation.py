@@ -308,7 +308,7 @@ def run_evaluation_baseline3(pth_model, data_set, s_batch, device, prog_bar, pth
     # gathering the training data
     _, test = ms1.load_data(data_set,
                              transformation=Compose([Resize([pixels,pixels*seq_len]), ToTensor()]),
-                             corpora=corpora, cluster=False)
+                             corpora=corpora, cluster=True)
     # setting up the (baseline-) model
     model = BaseLine3(n_char_class=len(test.character_classes)+1, shape_in=(1, pixels, pixels*seq_len),
                       sequence_length=seq_len)
@@ -343,7 +343,7 @@ def run_evaluation_kraken(pth_model, data_set, s_batch, device, prog_bar, pth_ou
     # gathering the training data
     _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([48,4*seq_len]), ToTensor()]),
-                            corpora=corpora, cluster=False)
+                            corpora=corpora, cluster=True)
     # setting up the (baseline-) model
     model = Kraken(n_char_class=len(test.character_classes)+1)
     # loading the model
