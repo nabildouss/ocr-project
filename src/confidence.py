@@ -89,19 +89,15 @@ def parser_clstm():
     return clstm_eval.parser()
 
 
-def clstm(data_set, corpora, pixels, pth_model, prog_bar=True):
-    ap = parser_clstm()
-    corpora = [data.ALL_CORPORA[ap.corpus_id]]
-    _, test = ms1.load_data(corpora=corpora, cluster=True, transformation=Compose([ToTensor()]))
+def clstm(data_set, corpora, pth_model, prog_bar=True):
+    _, test = ms1.load_data(data_set=data_set, corpora=corpora, cluster=True, transformation=Compose([ToTensor()]))
     # _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
     # construct network
     ninput = 32
     noutput = len(test.character_classes) + 1
-    net = clstm_eval.load(ap.clstm_path)
+    net = clstm_eval.load(pth_model)
     # gather confidences
-    preds, confs, targets = clstm_confidence()
-    # save to files
-    write_results(ap.out, preds, confs, targets)
+    return clstm_confidence(net=net, dset=test, prog_bar=prog_bar)
 
 
 def main_method(mode='torch'):
@@ -112,8 +108,15 @@ def main_method(mode='torch'):
                                        pth_model=ap.pth_model, prog_bar=ap.prog_bar)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
-        write_results(ap.out, preds, confs, targets)
-        return preds, confs, targets
+    elif mode == 'clstm':
+        ap = parser_clstm().parse_args()
+        if ap.model_type == 'clstm':
+            preds, confs, targets = clstm(data_set=ap.data_set, corpora=[data.ALL_CORPORA[ap.corpus_ids]],
+                                          pth_model=ap.pth_model)
+    else:
+        raise ValueError(f'unknown mode: {mode}')
+    write_results(ap.out, preds, confs, targets)
+    return preds, confs, targets
 
 
 def write_results(out, preds, confs, targets):
