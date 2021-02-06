@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, ToTensor
 import pickle
+import cv2
 import tqdm
 
 
@@ -29,6 +30,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
         confidences.append(*conf)
         predictions.append(*pred)
         targets.append(*tgt)
+        prog_bar.update(1)
     return predictions, confidences, targets
 
 
@@ -50,6 +52,58 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True):
     return torch_confidence(model, dset=test, prog_bar=prog_bar)
 
 
+def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4):
+    if prog_bar:
+        prog_bar = tqdm.tqdm(total=len(dset))
+    # the training loop
+    it_count = 0
+    L_IN = [int(model.sequence_length) for _ in range(s_batch)]
+    # new data loader initialization required after each epoch
+    dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
+                         collate_fn=dset.batch_transform)
+    confidences = []
+    predictions = []
+    targets = []
+    for batch, tgt, l_targets in dloader:
+        x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
+        scale_factor = 32 / x_in.shape[1]
+        x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+        x_in = x_in[:, :, None]
+        # forward pass
+        net.inputs.aset(x_in)
+        net.forward()
+        y_pred = net.outputs.array()
+        # confidences
+        pred, conf = ctc_decoder.torch_confidence(log_P=y_pred)
+        # storing information
+        confidences.append(*conf)
+        predictions.append(*pred)
+        targets.append(*tgt)
+        # moving progress bar
+        if prog_bar:
+            prog_bar.update(1)
+    return predictions, confidences, targets
+    
+
+def parser_clstm():
+    return clstm_eval.parser()
+
+
+def clstm(data_set, corpora, pixels, pth_model, prog_bar=True):
+    ap = parser_clstm()
+    corpora = [data.ALL_CORPORA[ap.corpus_id]]
+    _, test = ms1.load_data(corpora=corpora, cluster=True, transformation=Compose([ToTensor()]))
+    # _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
+    # construct network
+    ninput = 32
+    noutput = len(test.character_classes) + 1
+    net = clstm_eval.load(ap.clstm_path)
+    # gather confidences
+    preds, confs, targets = clstm_confidence()
+    # save to files
+    write_results(ap.out, preds, confs, targets)
+
+
 def main_method(mode='torch'):
     if mode == 'torch':
         ap = parser_torch().parse_args()
@@ -58,15 +112,19 @@ def main_method(mode='torch'):
                                        pth_model=ap.pth_model, prog_bar=ap.prog_bar)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
-        if not os.path.isdir(ap.out):
-            os.makedirs(ap.out)
-        with open(os.path.join(ap.out, 'predictions.pkl'), 'wb') as f_pred:
-            pickle.dump(predictions, f_pred)
-        with open(os.path.join(ap.out, 'confidences.pkl'), 'wb') as f_conf:
-            pickle.dump(confidences, f_conf)
-        with open(os.path.join(ap.out, 'targets.pkl'), 'wb') as f_tgt:
-            pickle.dump(targets, f_tgt)
+        write_results(ap.out, preds, confs, targets)
         return preds, confs, targets
+
+
+def write_results(out, preds, confs, targets):
+        if not os.path.isdir(out):
+            os.makedirs(out)
+        with open(os.path.join(out, 'predictions.pkl'), 'wb') as f_pred:
+            pickle.dump(preds, f_pred)
+        with open(os.path.join(out, 'confidences.pkl'), 'wb') as f_conf:
+            pickle.dump(confs, f_conf)
+        with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
+            pickle.dump(targets, f_tgt)
 
 
 if __name__ == '__main__':

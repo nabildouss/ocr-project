@@ -161,12 +161,6 @@ def CTC_confidence(L_CTC):
     :param L_CTC: CTC loss values
     :return: convidence scores based on loss values
     """
-    if not isinstance(L_CTC, torch.Tensor):
-        if isinstance(L_CTC, np.ndarray):
-            L_CTC = torch.from_numpy(L_CTC)
-        else:
-            L_CTC = torch.tensor(L_CTC)
-    L_CTC = L_CTC.type(torch.float32)
     return 1 / torch.exp(L_CTC)
 
 
@@ -176,6 +170,15 @@ def torch_confidence(log_P, blank=0):
     PyTorch's CTCLoss.
     Loss values are being handed to CTC_convidence
     """
+    def tens_convert(x):
+        if not isinstance(x, torch.Tensor):
+            if isinstance(x, np.ndarray):
+                x = torch.from_numpy(x)
+            else:
+                x = torch.tensor(x)
+        x = x.type(torch.float32)
+        return x
+    log_P = tens_convert(log_P)
     targets = []
     len_targets = []
     for p in log_P:
