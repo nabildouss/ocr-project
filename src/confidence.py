@@ -16,8 +16,8 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
-    it_count = 0
-    L_IN = [int(model.sequence_length) for _ in range(s_batch)]
+    # it_count = 0
+    # L_IN = [int(model.sequence_length) for _ in range(s_batch)]
     # new data loader initialization required after each epoch
     dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
                          collate_fn=dset.batch_transform)
@@ -56,8 +56,8 @@ def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
-    it_count = 0
-    L_IN = [int(model.sequence_length) for _ in range(s_batch)]
+    # it_count = 0
+    # L_IN = [int(net.sequence_length) for _ in range(s_batch)]
     # new data loader initialization required after each epoch
     dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
                          collate_fn=dset.batch_transform)
@@ -131,5 +131,5 @@ def write_results(out, preds, confs, targets):
 
 
 if __name__ == '__main__':
-    predictions, confidences = main_method('torch')
-    # predictions, confidences = main_method('clstm')
+    predictions, confidences, targets = main_method('torch')
+    # predictions, confidences, targets = main_method('clstm')
