@@ -186,7 +186,7 @@ def torch_confidence(log_P, blank=0):
         targets.append(tgt)
         len_targets.append(len(tgt))
     len_in = [log_P.shape[0] for _ in range(log_P.shape[1])]
-    targets = torch.stack(targets)
+    targets = torch.cat(targets)
     L_CTC = torch.nn.functional.ctc_loss(log_P, targets, len_in, len_targets, blank=blank)
     conf = CTC_confidence(L_CTC)
     return targets, conf
