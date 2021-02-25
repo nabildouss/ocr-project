@@ -181,12 +181,12 @@ def torch_confidence(log_P, blank=0):
     log_P = tens_convert(log_P)
     targets = []
     len_targets = []
-    for p in log_P:
-        tgt = decode(p)
+    for i in range(log_P.shape[1]):
+        tgt = decode(log_P[:,i,:])
         targets.append(tgt)
         len_targets.append(len(tgt))
     len_in = [log_P.shape[0] for _ in range(log_P.shape[1])]
-    print((log_P, targets, len_in, len_targets) )
+    targets = torch.stack(targets)
     L_CTC = torch.nn.functional.ctc_loss(log_P, targets, len_in, len_targets, blank=blank)
     conf = CTC_confidence(L_CTC)
     return targets, conf
