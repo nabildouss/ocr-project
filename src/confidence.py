@@ -1,8 +1,8 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__))), '..')
-from src import ctc_decoder, baseline, clstm_eval, clstm_train, evaluation, data
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from src import ctc_decoder, baseline, evaluation, data
 import src.milestone1 as ms1
 import torch
 from torch.utils.data import DataLoader
@@ -24,9 +24,10 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
     confidences = []
     predictions = []
     targets = []
+    model.eval()
     for batch, tgt, l_targets in dloader:
         y = model(batch)
-        pred, conf = ctc_decoder.torch_confidence(log_P=y)
+        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach())
         confidences.append(*conf)
         predictions.append(*pred)
         targets.append(*tgt)
@@ -38,10 +39,10 @@ def parser_torch():
     return evaluation.arg_parser()
 
 
-def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True):
+def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster=True):
     _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([pixels, pixels * seq_len]), ToTensor()]),
-                            corpora=corpora, cluster=True)
+                            corpora=corpora, cluster=cluster)
     # setting up the (baseline-) model
     model = baseline.BaseLine3(n_char_class=len(test.character_classes) + 1, shape_in=(1, pixels, pixels * seq_len),
                                sequence_length=seq_len)
@@ -100,12 +101,12 @@ def clstm(data_set, corpora, pth_model, prog_bar=True):
     return clstm_confidence(net=net, dset=test, prog_bar=prog_bar)
 
 
-def main_method(mode='torch'):
+def main_method(mode='torch', cluster=True):
     if mode == 'torch':
         ap = parser_torch().parse_args()
         if ap.model_type == 'Baseline3':
-            preds, confs, targets = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[ap.corpus_ids]], pixels=32,
-                                       pth_model=ap.pth_model, prog_bar=ap.prog_bar)
+            preds, confs, targets = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
+                                       pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
@@ -131,5 +132,6 @@ def write_results(out, preds, confs, targets):
 
 
 if __name__ == '__main__':
-    predictions, confidences, targets = main_method('torch')
+    predictions, confidences, targets = main_method('torch', cluster=False)
+    # from src import clstm_eval, clstm_train
     # predictions, confidences, targets = main_method('clstm')
