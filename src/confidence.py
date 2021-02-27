@@ -28,9 +28,9 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
     for batch, tgt, l_targets in dloader:
         y = model(batch)
         pred, conf = ctc_decoder.torch_confidence(log_P=y.detach())
-        confidences.append(*conf)
-        predictions.append(*pred)
-        targets.append(*tgt)
+        confidences.append(conf)
+        predictions.append(pred)
+        targets.append(tgt)
         prog_bar.update(1)
     return predictions, confidences, targets
 
