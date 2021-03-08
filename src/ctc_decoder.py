@@ -161,7 +161,9 @@ def CTC_confidence(L_CTC):
     :param L_CTC: CTC loss values
     :return: convidence scores based on loss values
     """
-    return 1 / torch.exp(L_CTC)
+    confidence = 1 / torch.exp(L_CTC)
+    print(confidence)
+    return confidence
 
 
 def torch_confidence(log_P, blank=0):
