@@ -162,11 +162,10 @@ def CTC_confidence(L_CTC):
     :return: convidence scores based on loss values
     """
     confidence = 1 / torch.exp(L_CTC)
-    print(confidence)
     return confidence
 
 
-def torch_confidence(log_P, blank=0):
+def torch_confidence(log_P, dset, blank=0):
     """
     calculates the confidence based on marginalization, marginalization is not carried out directly but rather by using
     PyTorch's CTCLoss.
@@ -185,6 +184,8 @@ def torch_confidence(log_P, blank=0):
     len_targets = []
     for i in range(log_P.shape[1]):
         tgt = decode(log_P[:,i,:])
+        tgt = dset.embedding_to_word(tgt)
+        tgt = dset.word_to_embedding(tgt)
         targets.append(tgt)
         len_targets.append(len(tgt))
     len_in = [log_P.shape[0] for _ in range(log_P.shape[1])]
@@ -192,3 +193,4 @@ def torch_confidence(log_P, blank=0):
     L_CTC = torch.nn.functional.ctc_loss(log_P, targets, len_in, len_targets, blank=blank)
     conf = CTC_confidence(L_CTC)
     return targets, conf
+

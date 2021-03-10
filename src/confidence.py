@@ -12,7 +12,7 @@ import cv2
 import tqdm
 
 
-def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
+def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
@@ -27,7 +27,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=4, n_workers=4):
     model.eval()
     for batch, tgt, l_targets in dloader:
         y = model(batch)
-        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach())
+        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach(), dset=dset)
         confidences.append(conf)
         predictions.append(pred)
         targets.append(tgt)
