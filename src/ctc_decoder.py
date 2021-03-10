@@ -50,7 +50,7 @@ def addBeam(beamState, labeling):
         beamState.entries[labeling] = BeamEntry()
 
 
-def ctcBeamSearch(mat, classes, lm, beamWidth=25, blankIdx=0):
+def ctcBeamSearch(mat, classes, lm, beamWidth=3, blankIdx=0):
     "beam search as described by the paper of Hwang et al. and the paper of Graves et al."
 
     maxT, maxC = mat.shape
@@ -132,9 +132,10 @@ def ctcBeamSearch(mat, classes, lm, beamWidth=25, blankIdx=0):
     return res
 
 
-def decode(hypothesis, blank=0, lm=None):
+def decode(hypothesis, blank=0, lm=None, bs=False):
+    if bs:
+        return np.array(ctcBeamSearch(hypothesis, [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)).flatten()
     return greedy_decode(hypothesis, blank=blank)
-    #return np.array(ctcBeamSearch(hypothesis, [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)).flatten()
 
 
 def greedy_decode(hypothesis, blank=0):
@@ -165,7 +166,7 @@ def CTC_confidence(L_CTC):
     return confidence
 
 
-def torch_confidence(log_P, dset, blank=0):
+def torch_confidence(log_P, dset, blank=0, bs=True):
     """
     calculates the confidence based on marginalization, marginalization is not carried out directly but rather by using
     PyTorch's CTCLoss.
@@ -183,7 +184,7 @@ def torch_confidence(log_P, dset, blank=0):
     targets = []
     len_targets = []
     for i in range(log_P.shape[1]):
-        tgt = decode(log_P[:,i,:])
+        tgt = decode(log_P[:,i,:], bs=bs)
         tgt = dset.embedding_to_word(tgt)
         tgt = dset.word_to_embedding(tgt)
         targets.append(tgt)
