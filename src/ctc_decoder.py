@@ -50,7 +50,7 @@ def addBeam(beamState, labeling):
         beamState.entries[labeling] = BeamEntry()
 
 
-def ctcBeamSearch(mat, classes, lm, beamWidth=3, blankIdx=0):
+def ctcBeamSearch(mat, classes, lm, beamWidth=10, blankIdx=0):
     "beam search as described by the paper of Hwang et al. and the paper of Graves et al."
 
     maxT, maxC = mat.shape
@@ -134,7 +134,8 @@ def ctcBeamSearch(mat, classes, lm, beamWidth=3, blankIdx=0):
 
 def decode(hypothesis, blank=0, lm=None, bs=False):
     if bs:
-        return np.array(ctcBeamSearch(hypothesis, [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)).flatten()
+        best_beam = ctcBeamSearch(np.exp(hypothesis), [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)
+        return torch.from_numpy(np.array(best_beam).flatten())
     return greedy_decode(hypothesis, blank=blank)
 
 
@@ -184,8 +185,12 @@ def torch_confidence(log_P, dset, blank=0, bs=True):
     targets = []
     len_targets = []
     for i in range(log_P.shape[1]):
+        bestP = decode(log_P[:,i,:], bs=False)
+        bestP = dset.embedding_to_word(bestP)
         tgt = decode(log_P[:,i,:], bs=bs)
         tgt = dset.embedding_to_word(tgt)
+        print(f'best path:   {bestP}\n' +
+              f'beam search: {tgt}')
         tgt = dset.word_to_embedding(tgt)
         targets.append(tgt)
         len_targets.append(len(tgt))

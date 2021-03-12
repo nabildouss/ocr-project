@@ -26,6 +26,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
     targets = []
     model.eval()
     for batch, tgt, l_targets in dloader:
+        print(f'target:      {dset.embedding_to_word(tgt)}')
         y = model(batch)
         pred, conf = ctc_decoder.torch_confidence(log_P=y.detach(), dset=dset)
         confidences.append(conf)
