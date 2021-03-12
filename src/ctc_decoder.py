@@ -132,7 +132,11 @@ def ctcBeamSearch(mat, classes, lm, beamWidth=10, blankIdx=0):
     return res
 
 
-def decode(hypothesis, blank=0, lm=None, bs=False):
+def decode(hypothesis, blank=0, lm=None, bs=False, decoder=None):
+    if decoder is not None:
+        hypothesis = hypothesis.permute(1,0,2)
+        beam_results, beam_scores, timesteps, out_lens = decoder.decode(hypothesis)
+        return [beam_results[i][0][:out_lens[i][0]] for i in range(len(out_lens))]
     if bs:
         best_beam = ctcBeamSearch(np.exp(hypothesis), [[i] for i in range(hypothesis.shape[1]+1)], lm=lm)
         return torch.from_numpy(np.array(best_beam).flatten())
@@ -167,7 +171,7 @@ def CTC_confidence(L_CTC):
     return confidence
 
 
-def torch_confidence(log_P, dset, blank=0, bs=True):
+def torch_confidence(log_P, dset, blank=0, bs=True, decoder=None):
     """
     calculates the confidence based on marginalization, marginalization is not carried out directly but rather by using
     PyTorch's CTCLoss.
@@ -184,16 +188,30 @@ def torch_confidence(log_P, dset, blank=0, bs=True):
     log_P = tens_convert(log_P)
     targets = []
     len_targets = []
-    for i in range(log_P.shape[1]):
-        bestP = decode(log_P[:,i,:], bs=False)
-        bestP = dset.embedding_to_word(bestP)
-        tgt = decode(log_P[:,i,:], bs=bs)
-        tgt = dset.embedding_to_word(tgt)
-        print(f'best path:   {bestP}\n' +
-              f'beam search: {tgt}')
-        tgt = dset.word_to_embedding(tgt)
-        targets.append(tgt)
-        len_targets.append(len(tgt))
+    # using a pytorch ctc bs decoder
+    if decoder is not None:
+        best_beams = decode(log_P, decoder=decoder)
+        for i, b in enumerate(best_beams):
+            bestP = decode(log_P[:,i,:], bs=False)
+            bestP = dset.embedding_to_word(bestP)
+            tgt = dset.embedding_to_word(b)
+            print(f'best path:   {bestP}\n' +
+                  f'beam search: {tgt}')
+            tgt = dset.word_to_embedding(tgt)
+            targets.append(tgt)
+            len_targets.append(len(tgt))
+    # using python code
+    else:
+        for i in range(log_P.shape[1]):
+            bestP = decode(log_P[:,i,:], bs=False)
+            bestP = dset.embedding_to_word(bestP)
+            tgt = decode(log_P[:,i,:], bs=bs)
+            tgt = dset.embedding_to_word(tgt)
+            #print(f'best path:   {bestP}\n' +
+            #      f'beam search: {tgt}')
+            tgt = dset.word_to_embedding(tgt)
+            targets.append(tgt)
+            len_targets.append(len(tgt))
     len_in = [log_P.shape[0] for _ in range(log_P.shape[1])]
     targets = torch.cat(targets)
     L_CTC = torch.nn.functional.ctc_loss(log_P, targets, len_in, len_targets, blank=blank)

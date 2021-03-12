@@ -1,3 +1,4 @@
+import numpy as np
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -10,6 +11,7 @@ from torchvision.transforms import Compose, Resize, ToTensor
 import pickle
 import cv2
 import tqdm
+from ctcdecode import CTCBeamDecoder
 
 
 def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
@@ -25,10 +27,22 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
     predictions = []
     targets = []
     model.eval()
+    decoder = CTCBeamDecoder(
+        ['{'] + [c for c in dset.character_classes],
+        model_path=None,
+        alpha=0,
+        beta=0,
+        cutoff_top_n=40,
+        cutoff_prob=1.0,
+        beam_width=100,
+        num_processes=4,
+        blank_id=0,
+        log_probs_input=True
+    )
     for batch, tgt, l_targets in dloader:
-        print(f'target:      {dset.embedding_to_word(tgt)}')
+        #print(f'target:      {dset.embedding_to_word(tgt)}')
         y = model(batch)
-        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach(), dset=dset)
+        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach(), dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
         targets.append(tgt)
