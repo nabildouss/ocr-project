@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import numpy as np
 import pickle
 import matplotlib as plt
+import pandas as pd
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -168,3 +169,11 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'unkown model type {ap.model_type}')
     plot_all(data, test, pfx, corpora[0], ap.dir_out, model=preds)
+
+
+def confidence_plot(cer, confs, bins_cer=50, bins_conf=50):
+    dct = {'CER': cer, 'confidence': confs}
+    data = pd.DataFrame.from_dict(dct)
+    plot = sns.displot(data, x='CER', y='confidence', facet_kws={'xlim':(0,1), 'ylim':(0,1)}, palette='dark', cbar=True,
+                color='black', cbar_kws={'drawedges': False})
+    plt.show()
