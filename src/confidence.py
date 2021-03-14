@@ -147,6 +147,7 @@ def write_results(out, preds, confs, targets):
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_sharing_strategy('file_system')
     predictions, confidences, targets = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
     # predictions, confidences, targets = main_method('clstm')
