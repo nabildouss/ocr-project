@@ -1,6 +1,9 @@
 from torchvision.transforms import Compose, ToTensor, Resize
 from argparse import ArgumentParser
 import numpy as np
+import torch
+
+from copy import deepcopy
 import pickle
 import matplotlib as plt
 import pandas as pd
@@ -15,6 +18,7 @@ import src.milestone1 as ms1
 import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
+import captum
 
 
 def hist(data, bins=100, title='evaluation'):
@@ -175,5 +179,83 @@ def confidence_plot(cer, confs, bins_cer=50, bins_conf=50):
     dct = {'CER': cer, 'confidence': confs}
     data = pd.DataFrame.from_dict(dct)
     plot = sns.displot(data, x='CER', y='confidence', facet_kws={'xlim':(0,1), 'ylim':(0,1)}, palette='dark', cbar=True,
-                color='black', cbar_kws={'drawedges': False})
+                       color='black', cbar_kws={'drawedges': False})
     plt.show()
+
+
+def local_importance(grads, width=32):
+    adjusted = np.zeros(grads.shape)
+    for i in range(grads.shape[1] // width):
+        adjusted[:, i*width: (i+1)*width] = grads[:, i*width: (i+1)*width] / np.sum(grads[:, i*width: (i+1)*width])
+    return adjusted
+ 
+
+def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', criterion=None):
+    if framework == 'torch':
+        if criterion is None:
+            criterion = torch.nn.CTCLoss()
+        input = torch.autograd.Variable(input, requires_grad=True)
+        y = model(input)
+        torch.nn.CTCLoss(blank=0, reduction='mean')
+        loss = criterion(y, targets, L_IN, l_targets)
+        loss.backward()
+        WIDTH = 512
+        
+
+        abs_gradients = input.grad.data.abs()
+
+
+        pos_grad = deepcopy(input.grad.data)
+        pos_grad *= pos_grad > 0
+        
+        pos_grad_x_inp = input * pos_grad
+
+        max_vals = torch.max(input.grad.data[0, 0], dim=0)[0].detach().numpy()
+        min_vals = torch.min(input.grad.data[0, 0], dim=0)[0].detach().numpy()
+        X = np.arange(len(max_vals))
+        plt.plot(X, max_vals)
+        plt.plot(X, min_vals)
+        plt.show()
+        
+        loc_imp = local_importance(pos_grad[0, 0].detach().numpy()[:, :WIDTH])
+        loc_max_vals = torch.max(torch.tensor(loc_imp), dim=0)[0].detach().numpy()
+        max_vals = torch.max(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
+        min_vals = torch.min(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
+        X = np.arange(len(max_vals))
+        plt.plot(X, loc_max_vals)
+        plt.plot(X, max_vals)
+        plt.plot(X, min_vals)
+        plt.show()
+        
+        
+        plt.imshow(abs_gradients[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        plt.title('abs gradients')
+        plt.show()
+
+        # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.show()
+
+        # plt.imshow(grad_above_0[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.show()
+
+        # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.show()
+
+        plt.show()
+
+        plt.imshow(loc_imp, cmap='bone')
+        plt.title('local importance')
+        plt.show()
+
+        plt.imshow(loc_imp*input.data[0,0].detach().numpy()[:, :WIDTH], cmap='bone')
+        plt.title('local importance x image')
+        plt.show()
+
+        plt.imshow(pos_grad_x_inp[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        plt.title('pos gradient x image')
+        plt.show()
+
+
+        plt.imshow(input[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        plt.title('input')
+        plt.show()
