@@ -23,7 +23,7 @@ class TestVisualize(TestCase):
                                         sequence_length=seq_len)
         state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
         self.model.load_state_dict(state_dict=state_dict)
-        self.model.eval()
+        #self.model.eval()
         for batch, targets, l_targets in dloader:
             self.targets = targets
             self.l_targets = l_targets

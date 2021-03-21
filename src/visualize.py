@@ -185,8 +185,12 @@ def confidence_plot(cer, confs, bins_cer=50, bins_conf=50):
 
 def local_importance(grads, width=32):
     adjusted = np.zeros(grads.shape)
-    for i in range(grads.shape[1] // width):
-        adjusted[:, i*width: (i+1)*width] = grads[:, i*width: (i+1)*width] / np.sum(grads[:, i*width: (i+1)*width])
+    #for i in range(grads.shape[1] // width):
+    #    adjusted[:, i*width: (i+1)*width] = grads[:, i*width: (i+1)*width] / np.sum(grads[:, i*width: (i+1)*width])
+    k_size = width
+    for i in range(grads.shape[0] // k_size):
+        for j in range(grads.shape[1] // k_size):
+            adjusted[i*k_size:(i+1)*k_size, j*k_size:(j+1)*k_size] = grads[i*k_size:(i+1)*k_size, j*k_size:(j+1)*k_size] / np.sum(grads[i*k_size:(i+1)*k_size, j*k_size:(j+1)*k_size])
     return adjusted
  
 
