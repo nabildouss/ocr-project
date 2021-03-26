@@ -40,6 +40,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
         blank_id=0,
         log_probs_input=True
     )
+    i = 1
     for batch, tgt, l_targets in dloader:
         #print(f'target:      {dset.embedding_to_word(tgt)}')
         y = model(batch)
@@ -47,6 +48,10 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
         confidences.append(conf)
         predictions.append(pred)
         targets.append(tgt)
+        if i % 100 == 0:
+            print(f'pred: {dset.embedding_to_word(pred)}' +
+                  f'gt:   {dset.embedding_to_word(tgt)}')
+        i += 1
         prog_bar.update(1)
     return predictions, confidences, targets
 
