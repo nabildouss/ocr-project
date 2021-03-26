@@ -175,12 +175,15 @@ if __name__ == '__main__':
     plot_all(data, test, pfx, corpora[0], ap.dir_out, model=preds)
 
 
-def confidence_plot(cer, confs, bins_cer=50, bins_conf=50):
+def confidence_plot(cer, confs, save_path=None, show=False):
     dct = {'CER': cer, 'confidence': confs}
     data = pd.DataFrame.from_dict(dct)
     plot = sns.displot(data, x='CER', y='confidence', facet_kws={'xlim':(0,1), 'ylim':(0,1)}, palette='dark', cbar=True,
                        color='black', cbar_kws={'drawedges': False})
-    plt.show()
+    if save_path is not None:
+        plt.savefig(save_path)
+    if show:
+        plt.show()
 
 
 def local_importance(grads, width=32):
@@ -194,7 +197,7 @@ def local_importance(grads, width=32):
     return adjusted
  
 
-def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', criterion=None):
+def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', criterion=None, save_path=None, show=False):
     if framework == 'torch':
         if criterion is None:
             criterion = torch.nn.CTCLoss()
@@ -259,7 +262,11 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         plt.title('pos gradient x image')
         plt.show()
 
-
         plt.imshow(input[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
         plt.title('input')
         plt.show()
+        
+        if save_path is not None:
+            plt.savefig(save_path)
+        if show is not None:
+            plt.show()

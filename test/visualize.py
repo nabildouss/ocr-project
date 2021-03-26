@@ -5,6 +5,7 @@ import src.milestone1 as ms1
 from torchvision.transforms import Compose, Resize, ToTensor
 from torch.utils.data import DataLoader
 import torch
+import os
 
 
 class TestVisualize(TestCase):
@@ -30,9 +31,22 @@ class TestVisualize(TestCase):
             self.input = batch
             break
         self.L_IN = [self.model.sequence_length]
-        
+        self.out_file_conf = 'VISUALIZE_TEST.png'
+        self.out_file_expl = 'EXPLAIN_TEST.png'
+
+    def tearDown(self):
+        if os.path.isfile(self.out_file_conf):
+            os.remove(self.out_file_conf)
+        if os.path.isfile(self.out_file_expl):
+            os.remove(self.out_file_expl)
+
     def test_confidence_plot(self):
-        visualize.confidence_plot(self.errs, self.conf)
+        self.assertTrue(not os.path.isfile(self.out_file_conf))
+        visualize.confidence_plot(self.errs, self.conf, save_path=self.out_file_conf, show=True)
+        self.assertTrue(os.path.isfile(self.out_file_conf))
     
     def test_explanation_plot(self):
-        visualize.explanation_plot(self.input, self.model, self.targets, self.L_IN, self.l_targets)
+        self.assertTrue(not os.path.isfile(self.out_file_expl))
+        visualize.explanation_plot(self.input, self.model, self.targets, self.L_IN, self.l_targets,
+                                   save_path=self.out_file_expl, show=True)
+        self.assertTrue(os.path.isfile(self.out_file_expl))

@@ -3,18 +3,19 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from src import ctc_decoder, baseline, evaluation, data
+from src import ctc_decoder, baseline, evaluation, data, visualize
 import src.milestone1 as ms1
 import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, ToTensor
 import pickle
+import json
 import cv2
 import tqdm
 from ctcdecode import CTCBeamDecoder
 
 
-def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
+def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
@@ -34,7 +35,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4):
         beta=0,
         cutoff_top_n=40,
         cutoff_prob=1.0,
-        beam_width=100,
+        beam_width=beam_width,
         num_processes=4,
         blank_id=0,
         log_probs_input=True
@@ -65,7 +66,9 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     state_dict = torch.load(pth_model, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict=state_dict)
     model.eval()
-    return torch_confidence(model, dset=test, prog_bar=prog_bar)
+    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar)
+    cer, wer = cer_wer(y_pred, y, test)
+    return y_pred, p_conf, y, cer, wer
 
 
 def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4):
@@ -101,6 +104,17 @@ def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4):
     return predictions, confidences, targets
     
 
+def cer_wer(predictions, targets, dset):
+    cers = []
+    wers = []
+    for h, r in zip(predictions, targets):
+        hyp, ref = map(dset.embedding_to_word, [h, r])
+        cers.append(evaluation.cer(reference=ref, hypothesis=hyp))
+        wers.append(evaluation.wer(reference=ref, hypothesis=hyp))
+    return cers, wers
+
+
+
 def parser_clstm():
     return clstm_eval.parser()
 
@@ -120,7 +134,7 @@ def main_method(mode='torch', cluster=True):
     if mode == 'torch':
         ap = parser_torch().parse_args()
         if ap.model_type == 'Baseline3':
-            preds, confs, targets = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
+            preds, confs, targets, cer, wer = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
                                        pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
@@ -131,11 +145,11 @@ def main_method(mode='torch', cluster=True):
                                           pth_model=ap.pth_model)
     else:
         raise ValueError(f'unknown mode: {mode}')
-    write_results(ap.out, preds, confs, targets)
-    return preds, confs, targets
+    write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
+    return preds, confs, targets, cer, wer
 
 
-def write_results(out, preds, confs, targets):
+def write_results(out, preds, confs, targets, cer, wer):
         if not os.path.isdir(out):
             os.makedirs(out)
         with open(os.path.join(out, 'predictions.pkl'), 'wb') as f_pred:
@@ -144,10 +158,15 @@ def write_results(out, preds, confs, targets):
             pickle.dump(confs, f_conf)
         with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
             pickle.dump(targets, f_tgt)
+        with open(os.path.join(out, 'CER.json'), 'w') as f_cer:
+            json.dump(cer, f_cer)
+        with open(os.path.join(out, 'WER.json'), 'w') as f_wer:
+            json.dump(wer, f_wer)
 
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    predictions, confidences, targets = main_method('torch', cluster=False)
+    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
-    # predictions, confidences, targets = main_method('clstm')
+    #y_pred, p_conf, y = main_method('clstm', cluster=False)
+    visualize.confidence_plot(cer=cer, confs=p_conf)
