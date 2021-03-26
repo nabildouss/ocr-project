@@ -119,8 +119,8 @@ def cer_wer(predictions, targets, dset):
     wers = []
     for h, r in zip(predictions, targets):
         hyp, ref = map(dset.embedding_to_word, [h, r])
-        cers.append(evaluation.cer(reference=ref, hypothesis=hyp))
-        wers.append(evaluation.wer(reference=ref, hypothesis=hyp))
+        cers.append(evaluation.adjusted_cer(reference=ref, hypothesis=hyp))
+        wers.append(evaluation.adjusted_wer(reference=ref, hypothesis=hyp))
     return cers, wers
 
 
