@@ -149,7 +149,7 @@ def main_method(mode='torch', cluster=True):
         if ap.model_type == 'Baseline3':
             preds, confs, targets, cer, wer = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
                                                  pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
-                                                 beam_width=ap.beam_swidth)
+                                                 beam_width=ap.beam_width)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
