@@ -49,7 +49,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
         predictions.append(pred)
         targets.append(tgt)
         if i % 100 == 0:
-            print(f'pred: {dset.embedding_to_word(pred)}' +
+            print(f'pred: {dset.embedding_to_word(pred)}\n' +
                   f'gt:   {dset.embedding_to_word(tgt)}')
         i += 1
         prog_bar.update(1)
