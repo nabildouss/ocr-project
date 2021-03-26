@@ -56,6 +56,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
                   f'gt:   {dset.embedding_to_word(tgt)}')
         i += 1
         prog_bar.update(1)
+        confidences = np.array(confidences)
     return predictions, confidences, targets
 
 

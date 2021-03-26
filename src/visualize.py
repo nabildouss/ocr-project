@@ -179,7 +179,7 @@ def confidence_plot(cer, confs, save_path=None, show=False):
     dct = {'CER': cer, 'confidence': confs}
     data = pd.DataFrame.from_dict(dct)
     plot = sns.displot(data, x='CER', y='confidence', facet_kws={'xlim':(0,1), 'ylim':(0,1)}, palette='dark', cbar=True,
-                       color='black', cbar_kws={'drawedges': False})
+                       color='black', cbar_kws={'drawedges': False}, discrete=False)
     if save_path is not None:
         plt.savefig(save_path)
     if show:
