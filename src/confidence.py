@@ -15,7 +15,7 @@ import tqdm
 from ctcdecode import CTCBeamDecoder
 
 
-def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100):
+def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100, device=None):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
@@ -41,10 +41,12 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
         log_probs_input=True
     )
     i = 1
+    model = model.to(device)
     for batch, tgt, l_targets in dloader:
         #print(f'target:      {dset.embedding_to_word(tgt)}')
+        batch = batch.to(device)
         y = model(batch)
-        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach(), dset=dset, decoder=decoder)
+        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach().cpu(), dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
         targets.append(tgt)
@@ -72,7 +74,7 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     model.load_state_dict(state_dict=state_dict)
     model = model.to(device)
     model.eval()
-    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar)
+    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device)
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
     return y_pred, p_conf, y, cer, wer
