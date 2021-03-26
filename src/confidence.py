@@ -146,6 +146,7 @@ def main_method(mode='torch', cluster=True):
     else:
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
+    visualize.confidence_plot(cer=cer, confs=p_conf, save_path=os.path.join(ap.out, 'conf_plot'))
     return preds, confs, targets, cer, wer
 
 
@@ -169,4 +170,4 @@ if __name__ == '__main__':
     y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
     #y_pred, p_conf, y = main_method('clstm', cluster=False)
-    visualize.confidence_plot(cer=cer, confs=p_conf)
+    
