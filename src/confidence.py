@@ -64,7 +64,7 @@ def parser_torch():
     return evaluation.arg_parser()
 
 
-def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster=True, device=None):
+def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster=True, device=None, beam_width=100):
     _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([pixels, pixels * seq_len]), ToTensor()]),
                             corpora=corpora, cluster=cluster)
@@ -76,7 +76,7 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     model.load_state_dict(state_dict=state_dict)
     model = model.to(device)
     model.eval()
-    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device)
+    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device, beam_width=beam_width)
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
     return y_pred, p_conf, y, cer, wer
@@ -143,11 +143,14 @@ def clstm(data_set, corpora, pth_model, prog_bar=True):
 
 def main_method(mode='torch', cluster=True):
     if mode == 'torch':
-        ap = parser_torch().parse_args()
+        ap = parser_torch()
+        ap.add_argument('--beam_width', default=1, type=int)
+        ap = ap.parse_args()
         device = torch.device(ap.device)
         if ap.model_type == 'Baseline3':
             preds, confs, targets, cer, wer = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
-                                       pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device)
+                                                 pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
+                                                 beam_width=ap.beam_swidth)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
