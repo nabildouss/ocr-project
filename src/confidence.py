@@ -156,7 +156,7 @@ def main_method(mode='torch', cluster=True):
     else:
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
-    visualize.confidence_plot(cer=cer, confs=p_conf, save_path=os.path.join(ap.out, 'conf_plot'))
+    visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, 'conf_plot'))
     return preds, confs, targets, cer, wer
 
 
