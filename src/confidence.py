@@ -15,7 +15,7 @@ import tqdm
 from ctcdecode import CTCBeamDecoder
 
 
-def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100, device=None):
+def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4, beam_width=100, device=None):
     if prog_bar:
         prog_bar = tqdm.tqdm(total=len(dset))
     # the training loop
@@ -45,7 +45,7 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
     for batch, tgt, l_targets in dloader:
         #print(f'target:      {dset.embedding_to_word(tgt)}')
         batch = batch.to(device)
-        y = model(batch)
+        y = f_forward(model, batch)
         pred, conf = ctc_decoder.torch_confidence(log_P=y.detach().cpu(), dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
@@ -57,6 +57,11 @@ def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_wi
         prog_bar.update(1)
     confidences = np.array(confidences)
     return predictions, confidences, targets
+
+
+def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100, device=None):
+    return run_confidence(model=model, dset=dset, prog_bar=prog_bar, s_batch=s_batch, n_workers=n_workers,
+                          beam_width=beam_width, device=device, f_forward=torch_forward)
 
 
 def parser_torch():
@@ -81,37 +86,55 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     return y_pred, p_conf, y, cer, wer
 
 
-def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4):
-    if prog_bar:
-        prog_bar = tqdm.tqdm(total=len(dset))
-    # the training loop
-    # it_count = 0
-    # L_IN = [int(net.sequence_length) for _ in range(s_batch)]
-    # new data loader initialization required after each epoch
-    dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
-                         collate_fn=dset.batch_transform)
-    confidences = []
-    predictions = []
-    targets = []
-    for batch, tgt, l_targets in dloader:
-        x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
-        scale_factor = 32 / x_in.shape[1]
-        x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
-        x_in = x_in[:, :, None]
-        # forward pass
-        net.inputs.aset(x_in)
-        net.forward()
-        y_pred = net.outputs.array()
-        # confidences
-        pred, conf = ctc_decoder.torch_confidence(log_P=y_pred)
-        # storing information
-        confidences.append(*conf)
-        predictions.append(*pred)
-        targets.append(*tgt)
-        # moving progress bar
-        if prog_bar:
-            prog_bar.update(1)
-    return predictions, confidences, targets
+def torch_forward(model, batch):
+    return model(batch)
+    
+
+def clstm_forward(net, batch):
+    x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
+    scale_factor = 32 / x_in.shape[1]
+    x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+    x_in = x_in[:, :, None]
+    # forward pass
+    net.inputs.aset(x_in)
+    net.forward()
+    y_pred = net.outputs.array()
+    return y_pred
+
+
+def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100):
+    return run_confidence(model=net, dset=dset, prog_bar=prog_bar, s_batch=s_batch, n_workers=n_workers,
+                          beam_width=beam_width, f_forward=clstm_forward)
+    # if prog_bar:
+    #     prog_bar = tqdm.tqdm(total=len(dset))
+    # # the training loop
+    # # it_count = 0
+    # # L_IN = [int(net.sequence_length) for _ in range(s_batch)]
+    # # new data loader initialization required after each epoch
+    # dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
+    #                      collate_fn=dset.batch_transform)
+    # confidences = []
+    # predictions = []
+    # targets = []
+    # for batch, tgt, l_targets in dloader:
+    #     x_in = batch.cpu().detach().numpy().reshape(*batch.shape[-2:]).T
+    #     scale_factor = 32 / x_in.shape[1]
+    #     x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+    #     x_in = x_in[:, :, None]
+    #     # forward pass
+    #     net.inputs.aset(x_in)
+    #     net.forward()
+    #     y_pred = net.outputs.array()
+    #     # confidences
+    #     pred, conf = ctc_decoder.torch_confidence(log_P=y_pred)
+    #     # storing information
+    #     confidences.append(*conf)
+    #     predictions.append(*pred)
+    #     targets.append(*tgt)
+    #     # moving progress bar
+    #     if prog_bar:
+    #         prog_bar.update(1)
+    # return predictions, confidences, targets
     
 
 def cer_wer(predictions, targets, dset):
@@ -124,20 +147,19 @@ def cer_wer(predictions, targets, dset):
     return cers, wers
 
 
-
 def parser_clstm():
     return clstm_eval.parser()
 
 
-def clstm(data_set, corpora, pth_model, prog_bar=True):
-    _, test = ms1.load_data(data_set=data_set, corpora=corpora, cluster=True, transformation=Compose([ToTensor()]))
+def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=100):
+    _, test = ms1.load_data(data_set=data_set, corpora=corpora, cluster=cluster, transformation=Compose([ToTensor()]))
     # _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
     # construct network
     ninput = 32
     noutput = len(test.character_classes) + 1
     net = clstm_eval.load(pth_model)
     # gather confidences
-    return clstm_confidence(net=net, dset=test, prog_bar=prog_bar)
+    return clstm_confidence(net=net, dset=test, prog_bar=prog_bar, beam_width=beam_width)
 
 
 def main_method(mode='torch', cluster=True):
@@ -153,10 +175,13 @@ def main_method(mode='torch', cluster=True):
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
-        ap = parser_clstm().parse_args()
+        ap = parser_clstm()
+        ap.add_argument('--beam_width', default=1, type=int)
+        ap = ap.parse_args()
         if ap.model_type == 'clstm':
             preds, confs, targets = clstm(data_set=ap.data_set, corpora=[data.ALL_CORPORA[ap.corpus_ids]],
-                                          pth_model=ap.pth_model)
+                                          pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster,
+                                          beam_width=ap.beam_width)
     else:
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
