@@ -186,6 +186,8 @@ def torch_confidence(log_P, dset, blank=0, bs=True, decoder=None):
         x = x.type(torch.float32)
         return x
     log_P = tens_convert(log_P)
+    # print(log_P.shape)
+    # print(log_P.sum(axis=2))
     targets = []
     len_targets = []
     # using a pytorch ctc bs decoder
@@ -195,8 +197,8 @@ def torch_confidence(log_P, dset, blank=0, bs=True, decoder=None):
             bestP = decode(log_P[:,i,:], bs=False)
             bestP = dset.embedding_to_word(bestP)
             tgt = dset.embedding_to_word(b)
-            # print(f'best path:   {bestP}\n' +
-            #       f'beam search: {tgt}')
+            print(f'best path:   {bestP}\n' +
+                  f'beam search: {tgt}')
             tgt = dset.word_to_embedding(tgt)
             targets.append(tgt)
             len_targets.append(len(tgt))

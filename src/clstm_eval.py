@@ -57,6 +57,8 @@ def run_eval(net, dset, n_workers=4):
         gt_transcript = torch.tensor(gt_transcript)
         hyp = dset.embedding_to_word(hyp)
         ref = dset.embedding_to_word(gt_transcript)
+        if i % 100 == 0:
+            print(f'hyp: {hyp}\nref: {ref}')
         preds.append(hyp)
         l_wer.append(wer(ref, hyp))
         l_cer.append(cer(ref, hyp))
@@ -79,6 +81,7 @@ def parser():
     ap.add_argument('--clstm_path', default='', type=str)
     ap.add_argument('--corpus_id', default=1, type=int)
     ap.add_argument('--out', default='CLSTM_results/my_model.json', type=str)
+    ap.add_argument('--prog_bar', default=True, type=bool)
     return ap
 
 def main_method(ap):

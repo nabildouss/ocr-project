@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from src import ctc_decoder, baseline, evaluation, data, visualize
+from src import ctc_decoder, baseline, evaluation, data, visualize, clstm_eval
 import src.milestone1 as ms1
 import torch
 from torch.utils.data import DataLoader
@@ -27,7 +27,6 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
     confidences = []
     predictions = []
     targets = []
-    model.eval()
     decoder = CTCBeamDecoder(
         ['{'] + [c for c in dset.character_classes],
         model_path=None,
@@ -38,15 +37,17 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         beam_width=beam_width,
         num_processes=4,
         blank_id=0,
-        log_probs_input=True
+        log_probs_input=True if device is None else False
     )
     i = 1
-    model = model.to(device)
+    if device is not None:
+        model.eval()
+        model = model.to(device)
     for batch, tgt, l_targets in dloader:
         #print(f'target:      {dset.embedding_to_word(tgt)}')
         batch = batch.to(device)
         y = f_forward(model, batch)
-        pred, conf = ctc_decoder.torch_confidence(log_P=y.detach().cpu(), dset=dset, decoder=decoder)
+        pred, conf = ctc_decoder.torch_confidence(log_P=y, dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
         targets.append(tgt)
@@ -87,7 +88,7 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
 
 
 def torch_forward(model, batch):
-    return model(batch)
+    return model(batch).detach().cpu()
     
 
 def clstm_forward(net, batch):
@@ -99,6 +100,7 @@ def clstm_forward(net, batch):
     net.inputs.aset(x_in)
     net.forward()
     y_pred = net.outputs.array()
+    y_pred = y_pred.transpose(2,0,1)
     return y_pred
 
 
@@ -178,10 +180,9 @@ def main_method(mode='torch', cluster=True):
         ap = parser_clstm()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
-        if ap.model_type == 'clstm':
-            preds, confs, targets = clstm(data_set=ap.data_set, corpora=[data.ALL_CORPORA[ap.corpus_ids]],
-                                          pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster,
-                                          beam_width=ap.beam_width)
+        preds, confs, targets = clstm(data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
+                                      pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
+                                      beam_width=ap.beam_width)
     else:
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
@@ -206,7 +207,7 @@ def write_results(out, preds, confs, targets, cer, wer):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
+    #y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
-    #y_pred, p_conf, y = main_method('clstm', cluster=False)
+    y_pred, p_conf, y = main_method('clstm', cluster=True)
     
