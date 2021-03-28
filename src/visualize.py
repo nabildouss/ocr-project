@@ -217,56 +217,57 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         
         pos_grad_x_inp = input * pos_grad
 
-        max_vals = torch.max(input.grad.data[0, 0], dim=0)[0].detach().numpy()
-        min_vals = torch.min(input.grad.data[0, 0], dim=0)[0].detach().numpy()
-        X = np.arange(len(max_vals))
-        plt.plot(X, max_vals)
-        plt.plot(X, min_vals)
-        plt.show()
-        
-        loc_imp = local_importance(pos_grad[0, 0].detach().numpy()[:, :WIDTH])
-        loc_max_vals = torch.max(torch.tensor(loc_imp), dim=0)[0].detach().numpy()
-        max_vals = torch.max(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
-        min_vals = torch.min(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
-        X = np.arange(len(max_vals))
-        plt.plot(X, loc_max_vals)
-        plt.plot(X, max_vals)
-        plt.plot(X, min_vals)
-        plt.show()
-        
-        
-        plt.imshow(abs_gradients[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        plt.title('abs gradients')
-        plt.show()
-
-        # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # max_vals = torch.max(input.grad.data[0, 0], dim=0)[0].detach().numpy()
+        # min_vals = torch.min(input.grad.data[0, 0], dim=0)[0].detach().numpy()
+        # X = np.arange(len(max_vals))
+        # plt.plot(X, max_vals)
+        # plt.plot(X, min_vals)
         # plt.show()
-
-        # plt.imshow(grad_above_0[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        #
+        # loc_imp = local_importance(pos_grad[0, 0].detach().numpy()[:, :WIDTH])
+        # loc_max_vals = torch.max(torch.tensor(loc_imp), dim=0)[0].detach().numpy()
+        # max_vals = torch.max(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
+        # min_vals = torch.min(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
+        # X = np.arange(len(max_vals))
+        # plt.plot(X, loc_max_vals)
+        # plt.plot(X, max_vals)
+        # plt.plot(X, min_vals)
         # plt.show()
-
-        # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        #
+        #
+        # plt.imshow(abs_gradients[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.title('abs gradients')
         # plt.show()
-
-        plt.show()
-
-        plt.imshow(loc_imp, cmap='bone')
-        plt.title('local importance')
-        plt.show()
-
-        plt.imshow(loc_imp*input.data[0,0].detach().numpy()[:, :WIDTH], cmap='bone')
-        plt.title('local importance x image')
-        plt.show()
-
-        plt.imshow(pos_grad_x_inp[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        plt.title('pos gradient x image')
-        plt.show()
-
-        plt.imshow(input[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        plt.title('input')
-        plt.show()
-        
-        if save_path is not None:
-            plt.savefig(save_path)
-        if show is not None:
-            plt.show()
+        #
+        # # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # # plt.show()
+        #
+        # # plt.imshow(grad_above_0[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # # plt.show()
+        #
+        # # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # # plt.show()
+        #
+        # plt.show()
+        #
+        # plt.imshow(loc_imp, cmap='bone')
+        # plt.title('local importance')
+        # plt.show()
+        #
+        # plt.imshow(loc_imp*input.data[0,0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.title('local importance x image')
+        # plt.show()
+        #
+        # plt.imshow(pos_grad_x_inp[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.title('pos gradient x image')
+        # plt.show()
+        #
+        # plt.imshow(input[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
+        # plt.title('input')
+        # plt.show()
+        #
+        # if save_path is not None:
+        #     plt.savefig(save_path)
+        # if show is not None:
+        #     plt.show()
+        return pos_grad_x_inp

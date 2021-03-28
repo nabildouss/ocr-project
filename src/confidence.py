@@ -22,7 +22,7 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
     # it_count = 0
     # L_IN = [int(model.sequence_length) for _ in range(s_batch)]
     # new data loader initialization required after each epoch
-    dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=True,
+    dloader = DataLoader(dset, batch_size=s_batch, num_workers=n_workers, shuffle=False,
                          collate_fn=dset.batch_transform)
     confidences = []
     predictions = []
@@ -84,7 +84,14 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device, beam_width=beam_width)
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
-    return y_pred, p_conf, y, cer, wer
+    
+    sorted_err = np.argsort(cer)
+    worst = [test[i] for i in sorted_err[-4:]]
+    worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst)
+    explanations = [visualize.explanation_plot(worst_imgs[i], model, worst_targets[i],
+                                               L_IN=seq_len, l_targets=worst_ltargets[i])
+                    for i in range(len(worst))]
+    return y_pred, p_conf, y, cer, wer, explanations
 
 
 def torch_forward(model, batch):
@@ -171,9 +178,9 @@ def main_method(mode='torch', cluster=True):
         ap = ap.parse_args()
         device = torch.device(ap.device)
         if ap.model_type == 'Baseline3':
-            preds, confs, targets, cer, wer = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
-                                                 pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
-                                                 beam_width=ap.beam_width)
+            preds, confs, targets, cer, wer, explanations = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
+                                                       pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
+                                                       beam_width=ap.beam_width)
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
@@ -185,12 +192,12 @@ def main_method(mode='torch', cluster=True):
                                       beam_width=ap.beam_width)
     else:
         raise ValueError(f'unknown mode: {mode}')
-    write_results(ap.out, preds, confs, targets, np.mean(cer), np.mean(wer))
+    write_results(ap.out, preds, confs, targets, cer, wer, explanations)
     visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, 'conf_plot'))
     return preds, confs, targets, cer, wer
 
 
-def write_results(out, preds, confs, targets, cer, wer):
+def write_results(out, preds, confs, targets, cer, wer, explanations=None):
         if not os.path.isdir(out):
             os.makedirs(out)
         with open(os.path.join(out, 'predictions.pkl'), 'wb') as f_pred:
@@ -199,10 +206,10 @@ def write_results(out, preds, confs, targets, cer, wer):
             pickle.dump(confs, f_conf)
         with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
             pickle.dump(targets, f_tgt)
-        with open(os.path.join(out, 'CER.json'), 'w') as f_cer:
-            json.dump(cer, f_cer)
-        with open(os.path.join(out, 'WER.json'), 'w') as f_wer:
-            json.dump(wer, f_wer)
+        with open(os.path.join(out, 'WER_CER.json'), 'w') as f_cer:
+            json.dump({'cer_list': cer, 'cer': np.mean(cer), 'wer_list': wer, 'wer':np.mean(wer)}, f_cer)
+        with open(os.path.join(out, 'explanations.pkl'), 'w') as f_explain:
+            pickle.dump(explanations, f_explain)
 
 
 if __name__ == '__main__':
