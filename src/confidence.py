@@ -37,7 +37,7 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         beam_width=beam_width,
         num_processes=4,
         blank_id=0,
-        log_probs_input=True if device is None else False
+        log_probs_input=True if device is not None else False
     )
     i = 1
     if device is not None:
@@ -47,7 +47,6 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         #print(f'target:      {dset.embedding_to_word(tgt)}')
         batch = batch.to(device)
         y = f_forward(model, batch)
-        print(y.shape)
         pred, conf = ctc_decoder.torch_confidence(log_P=y, dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
@@ -101,14 +100,11 @@ def clstm_forward(net, batch):
     net.inputs.aset(x_in)
     net.forward()
     y_pred = net.outputs.array()
-    print(y_pred.shape)
-    y_pred = y_pred.transpose(2,1,0)
-    print(y_pred.shape)
+    y_pred = y_pred.transpose(0,2,1)
     return y_pred
 
 
 def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100):
-    from src import clstm_eval
     return run_confidence(model=net, dset=dset, prog_bar=prog_bar, s_batch=s_batch, n_workers=n_workers,
                           beam_width=beam_width, f_forward=clstm_forward)
     # if prog_bar:
@@ -211,7 +207,8 @@ def write_results(out, preds, confs, targets, cer, wer):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
+    #y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
+    from src import clstm_eval
     y_pred, p_conf, y = main_method('clstm', cluster=True)
     
