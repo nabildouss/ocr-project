@@ -47,6 +47,7 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         #print(f'target:      {dset.embedding_to_word(tgt)}')
         batch = batch.to(device)
         y = f_forward(model, batch)
+        print(y.shape)
         pred, conf = ctc_decoder.torch_confidence(log_P=y, dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
@@ -100,7 +101,9 @@ def clstm_forward(net, batch):
     net.inputs.aset(x_in)
     net.forward()
     y_pred = net.outputs.array()
+    print(y_pred.shape)
     y_pred = y_pred.transpose(2,1,0)
+    print(y_pred.shape)
     return y_pred
 
 
@@ -207,7 +210,7 @@ def write_results(out, preds, confs, targets, cer, wer):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    #y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
+    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=True)
     # from src import clstm_eval, clstm_train
     y_pred, p_conf, y = main_method('clstm', cluster=True)
     
