@@ -100,7 +100,7 @@ def clstm_forward(net, batch):
     net.inputs.aset(x_in)
     net.forward()
     y_pred = net.outputs.array()
-    y_pred = y_pred.transpose(2,0,1)
+    y_pred = y_pred.transpose(2,1,0)
     return y_pred
 
 
