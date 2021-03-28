@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from src import ctc_decoder, baseline, evaluation, data, visualize, clstm_eval
+from src import ctc_decoder, baseline, evaluation, data, visualize
 import src.milestone1 as ms1
 import torch
 from torch.utils.data import DataLoader
@@ -108,6 +108,7 @@ def clstm_forward(net, batch):
 
 
 def clstm_confidence(net, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100):
+    from src import clstm_eval
     return run_confidence(model=net, dset=dset, prog_bar=prog_bar, s_batch=s_batch, n_workers=n_workers,
                           beam_width=beam_width, f_forward=clstm_forward)
     # if prog_bar:
@@ -210,7 +211,7 @@ def write_results(out, preds, confs, targets, cer, wer):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=True)
+    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
     y_pred, p_conf, y = main_method('clstm', cluster=True)
     
