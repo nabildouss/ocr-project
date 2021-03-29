@@ -301,3 +301,45 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
 
         pos_grad_x_inp = input * pos_grad
         return pos_grad_x_inp
+
+
+def len_plot(cer, lengths, save_path, bin_len=20):
+    cer = np.array(cer)
+    lengths = np.array(lengths)
+    idcs = np.argsort(cer)
+    cer = cer[idcs]
+    lengths = lengths[idcs]
+    
+    l, e = [], []
+    X = []
+    Y = []
+    i = 0
+    for k in range(len(cer)):
+        if i >= bin_len or k == len(cer)-1:
+            X.append(np.mean(e))
+            Y.append(np.mean(l))
+            e = []
+            l = []
+            i = 0
+        else:
+            l.append(lengths[k])
+            e.append(cer[k])
+            i += 1
+    plt.plot(X, Y)
+    plt.xlabel('CER')
+    plt.ylabel('length')
+    plt.savefig(save_path)
+
+
+def correctiosn_plot(err, save_path):
+    err = np.array(err)
+    idcs = np.argsort(err)
+    err = err[idcs][::-1]
+    corrections = np.arange(len(err))
+    ERR = []
+    for i in range(len(err)):
+        ERR.append(1-np.mean(err[i:]))
+    plt.plot(corrections, ERR)
+    plt.xlabel('# corrections')
+    plt.ylabel('accuracy')
+    plt.savefig(save_path)

@@ -27,6 +27,7 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
     confidences = []
     predictions = []
     targets = []
+    lengths = []
     decoder = CTCBeamDecoder(
         ['{'] + [c for c in dset.character_classes],
         model_path=None,
@@ -50,6 +51,8 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         pred, conf = ctc_decoder.torch_confidence(log_P=y, dset=dset, decoder=decoder)
         confidences.append(conf)
         predictions.append(pred)
+        for len_tgt in l_targets:
+            lengths.append(len_tgt)
         targets.append(tgt)
         if i % 100 == 0:
             print(f'pred: {dset.embedding_to_word(pred)}\n' +
@@ -57,7 +60,7 @@ def run_confidence(model, dset, f_forward, prog_bar=True, s_batch=1, n_workers=4
         i += 1
         prog_bar.update(1)
     confidences = np.array(confidences)
-    return predictions, confidences, targets
+    return predictions, confidences, targets, lengths
 
 
 def torch_confidence(model, dset, prog_bar=True, s_batch=1, n_workers=4, beam_width=100, device=None):
@@ -81,17 +84,30 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     model.load_state_dict(state_dict=state_dict)
     model = model.to(device)
     model.eval()
-    y_pred, p_conf, y = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device, beam_width=beam_width)
+    y_pred, p_conf, y, lengths = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device, beam_width=beam_width)
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
-    
-    sorted_err = [0,1,2,3,4,5,6] #np.argsort(cer)
+
+    sorted_err = np.argsort((cer + p_conf) ** 2)
     worst = [test[i] for i in sorted_err[-4:]]
-    worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst)
-    explanations = [visualize.explanation_plot(worst_imgs, model, worst_targets,
-                                               L_IN=[seq_len for _ in range(len(worst))], l_targets=worst_ltargets)
-                    for i in range(len(worst))]
-    return y_pred, p_conf, y, cer, wer, explanations
+    best = [test[i] for i in sorted_err[:4]]
+    explanations_worst = []
+    explanations_best = []
+    for i in range(4):
+        worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst[i:i + 1])
+        explanations_worst.append([
+            visualize.explanation_plot(worst_imgs, model, worst_targets,
+                                        L_IN=[], l_targets=worst_ltargets, framework='clstm'),
+            worst_imgs
+        ])
+        best_imgs, best_targets, best_ltargets = test.batch_transform(best[i:i + 1])
+        explanations_best.append([
+            visualize.explanation_plot(best_imgs, model, best_targets,
+                                       L_IN=[], l_targets=best_ltargets, framework='clstm'),
+            best_imgs
+        ])
+    explanations = [explanations_worst, explanations_best]
+    return y_pred, p_conf, y, cer, wer, explanations, lengths
 
 
 def torch_forward(model, batch):
@@ -170,17 +186,29 @@ def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=
     noutput = len(test.character_classes) + 1
     net = clstm_eval.load(pth_model)
     # gather confidences
-    y_pred, p_conf, y = clstm_confidence(net=net, dset=test, prog_bar=prog_bar, beam_width=beam_width)
+    y_pred, p_conf, y, lengths = clstm_confidence(net=net, dset=test, prog_bar=prog_bar, beam_width=beam_width)
     cer, wer = cer_wer(y_pred, y, test)
     
-    sorted_err = np.argsort(cer)
+    sorted_err = np.argsort((cer + p_conf)**2)
     worst = [test[i] for i in sorted_err[-4:]]
-    explanations = []
-    for i in range(len(worst)):
+    best = [test[i] for i in sorted_err[:4]]
+    explanations_worst = []
+    explanations_best = []
+    for i in range(4):
         worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst[i:i+1])
-        explanations.append(visualize.explanation_plot(worst_imgs, net, worst_targets,
-                                                       L_IN=[], l_targets=worst_ltargets, framework='clstm'))
-    return y_pred, p_conf, y, cer, wer, explanations
+        explanations_worst.append([
+            visualize.explanation_plot(worst_imgs, net, worst_targets,
+                                       L_IN=[], l_targets=worst_ltargets, framework='clstm'),
+            worst_imgs
+        ])
+        best_imgs, best_targets, best_ltargets = test.batch_transform(best[i:i + 1])
+        explanations_best.append([
+            visualize.explanation_plot(best_imgs, net, best_targets,
+                                       L_IN=[], l_targets=best_ltargets, framework='clstm'),
+            best_imgs
+        ])
+    explanations = [explanations_worst, explanations_best]
+    return y_pred, p_conf, y, cer, wer, explanations, lengths
 
 
 
@@ -191,22 +219,29 @@ def main_method(mode='torch', cluster=True):
         ap = ap.parse_args()
         device = torch.device(ap.device)
         if ap.model_type == 'Baseline3':
-            preds, confs, targets, cer, wer, explanations = sw(data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
-                                                       pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
-                                                       beam_width=ap.beam_width)
+            preds, confs, targets, cer, wer, explanations, lengths = sw(
+                data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
+                pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
+                beam_width=ap.beam_width
+            )
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
     elif mode == 'clstm':
         ap = parser_clstm()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
-        preds, confs, targets, cer, wer, explanations = clstm(data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
-                                                              pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
-                                                              beam_width=ap.beam_width)
+        preds, confs, targets, cer, wer, explanations, lengths = clstm(
+            data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
+            pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
+            beam_width=ap.beam_width
+        )
     else:
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, list(cer), list(wer), explanations)
     visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, 'conf_plot'))
+    visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, 'len_plot'))
+    visualize.corrections_plot(err=cer, save_path=os.path.join(ap.out, 'corrections_plot_CER'))
+    visualize.corrections_plot(err=wer, save_path=os.path.join(ap.out, 'corrections_plot_WER'))
     return preds, confs, targets, cer, wer
 
 
