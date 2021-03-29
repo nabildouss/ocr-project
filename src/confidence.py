@@ -173,7 +173,7 @@ def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=
     y_pred, p_conf, y = clstm_confidence(net=net, dset=test, prog_bar=prog_bar, beam_width=beam_width)
     cer, wer = cer_wer(y_pred, y, test)
     
-    sorted_err = [0,1,2,3,4,5,6] #np.argsort(cer)
+    sorted_err = np.argsort(cer)
     worst = [test[i] for i in sorted_err[-4:]]
     explanations = []
     for i in range(len(worst)):
