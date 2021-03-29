@@ -262,8 +262,10 @@ def write_results(out, preds, confs, targets, cer, wer, explanations=None):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    #y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
+    if os.path.isdir('../corpus'):
+        y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
-    from src import clstm_eval
-    main_method('clstm', cluster=True)
+    else:
+        from src import clstm_eval
+        main_method('clstm', cluster=True)
     
