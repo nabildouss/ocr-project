@@ -176,6 +176,7 @@ if __name__ == '__main__':
 
 
 def confidence_plot(cer, confs, save_path=None, show=False):
+    plt.clf()
     dct = {'CER': cer, 'confidence': confs}
     data = pd.DataFrame.from_dict(dct)
     plot = sns.displot(data, x='CER', y='confidence', facet_kws={'xlim':(0,1), 'ylim':(0,1)}, palette='dark', cbar=True,
@@ -304,6 +305,7 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
 
 
 def len_plot(cer, lengths, save_path, bin_len=20):
+    plt.clf()
     cer = np.array(cer)
     lengths = np.array(lengths)
     idcs = np.argsort(cer)
@@ -332,14 +334,32 @@ def len_plot(cer, lengths, save_path, bin_len=20):
 
 
 def corrections_plot(err, save_path):
+    plt.clf()
     err = np.array(err)
     idcs = np.argsort(err)
     err = err[idcs][::-1]
     corrections = np.arange(len(err))
     ERR = []
+    ticks = []
+    under_20 = False
+    under_10 = False
+    under_5 = False
     for i in range(len(err)):
-        ERR.append(1-np.mean(err[i:]))
+        new_acc = 1-(np.sum(err[i:])/len(err))
+        if new_acc >= 0.8 and not under_20:
+            under_20 = True
+            ticks.append(i)
+        if new_acc >= 0.9 and not under_10:
+            under_10 = True
+            ticks.append(i)
+        if new_acc >= 0.95 and not under_5:
+            under_5 = True
+            ticks.append(i)
+        ERR.append(new_acc)
     plt.plot(corrections, ERR)
-    plt.xlabel('# corrections')
+    for t in ticks:
+        plt.vlines(t, np.mean(err), 1, 'r', 'dotted')
+    #plt.xticks(list(plt.xticks()[0]) + ticks)
+    plt.xlabel(f'# corrections, breaks at {ticks}')
     plt.ylabel('accuracy')
     plt.savefig(save_path)
