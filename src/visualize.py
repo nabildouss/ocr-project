@@ -208,15 +208,41 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         loss = criterion(y, targets, L_IN, l_targets)
         loss.backward()
         WIDTH = 512
-        
-
-        abs_gradients = input.grad.data.abs()
-
-
         pos_grad = deepcopy(input.grad.data)
         pos_grad *= pos_grad > 0
         
-        pos_grad_x_inp = input * pos_grad
+    else:
+        from src import clstm_train
+        import clstm
+        x_in = input.cpu().detach().numpy().reshape(*input.shape[-2:]).T
+        scale_factor = 32 / x_in.shape[1]
+        x_in = cv2.resize(x_in, (32, int(x_in.shape[0] * scale_factor)))
+        x_in = x_in[:, :, None]
+        y_target = clstm_train.mktarget(targets, noutput=262)
+        # plt.imshow(y_target, cmap='bone')
+        # plt.show()
+        # plt.imshow(x_in.reshape(-1,32).T, cmap='bone')
+        # plt.show()
+        # raise
+        # forward pass
+        model.inputs.aset(x_in)
+        model.forward()
+        y_pred = model.outputs.array()
+        # gradients
+        ## alignments
+        seq = clstm.Sequence()
+        seq.aset(y_target.reshape(-1, 262, 1))
+        aligned = clstm.Sequence()
+        clstm.seq_ctc_align(aligned, model.outputs, seq)
+        aligned = aligned.array()
+        ## actual gradient adjustment
+        deltas = aligned - y_pred
+        # backward
+        model.d_outputs.aset(deltas)
+        model.backward()
+
+        pos_grad = model.d_inputs.array()
+        pos_grad = pos_grad * (pos_grad>0)
 
         # max_vals = torch.max(input.grad.data[0, 0], dim=0)[0].detach().numpy()
         # min_vals = torch.min(input.grad.data[0, 0], dim=0)[0].detach().numpy()
@@ -271,4 +297,6 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         #     plt.savefig(save_path)
         # if show is not None:
         #     plt.show()
+
+        pos_grad_x_inp = input * pos_grad
         return pos_grad_x_inp
