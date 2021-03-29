@@ -85,11 +85,11 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
     
-    sorted_err = np.argsort(cer)
+    sorted_err = [0,1,2,3,4,5,6] #np.argsort(cer)
     worst = [test[i] for i in sorted_err[-4:]]
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst)
-    explanations = [visualize.explanation_plot(worst_imgs[i], model, worst_targets[i],
-                                               L_IN=seq_len, l_targets=worst_ltargets[i])
+    explanations = [visualize.explanation_plot(worst_imgs, model, worst_targets,
+                                               L_IN=[seq_len for _ in range(len(worst))], l_targets=worst_ltargets)
                     for i in range(len(worst))]
     return y_pred, p_conf, y, cer, wer, explanations
 
@@ -208,14 +208,14 @@ def write_results(out, preds, confs, targets, cer, wer, explanations=None):
             pickle.dump(targets, f_tgt)
         with open(os.path.join(out, 'WER_CER.json'), 'w') as f_cer:
             json.dump({'cer_list': cer, 'cer': np.mean(cer), 'wer_list': wer, 'wer':np.mean(wer)}, f_cer)
-        with open(os.path.join(out, 'explanations.pkl'), 'w') as f_explain:
+        with open(os.path.join(out, 'explanations.pkl'), 'wb') as f_explain:
             pickle.dump(explanations, f_explain)
 
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    #y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
+    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
     # from src import clstm_eval, clstm_train
-    from src import clstm_eval
-    y_pred, p_conf, y = main_method('clstm', cluster=True)
+    # from src import clstm_eval
+    # y_pred, p_conf, y = main_method('clstm', cluster=True)
     

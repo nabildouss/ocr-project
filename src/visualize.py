@@ -199,6 +199,7 @@ def local_importance(grads, width=32):
 
 def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', criterion=None, save_path=None, show=False):
     if framework == 'torch':
+        #print(input.shape, targets.shape, L_IN, l_targets)
         if criterion is None:
             criterion = torch.nn.CTCLoss()
         input = torch.autograd.Variable(input, requires_grad=True)
