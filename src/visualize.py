@@ -225,6 +225,7 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         # plt.show()
         # raise
         # forward pass
+        input = x_in
         model.inputs.aset(x_in)
         model.forward()
         y_pred = model.outputs.array()
