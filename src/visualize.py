@@ -363,3 +363,17 @@ def corrections_plot(err, save_path):
     plt.xlabel(f'# corrections, breaks at {ticks}')
     plt.ylabel('accuracy')
     plt.savefig(save_path)
+
+
+def threshold_plot(err, confs, save_path, ylabel='error rate'):
+    threshs = np.arange(start=0.5, stop=1, step=0.1)
+    err = np.array(err)
+    confs = np.array(confs)
+    
+    e_rates = []
+    for t in threshs:
+        e_rates.append(np.sum(err[confs>t]) / len(err))
+    plt.plot(threshs, e_rates)
+    plt.xlabel('threshold')
+    plt.ylabel(ylabel)
+    plt.savefig(save_path)

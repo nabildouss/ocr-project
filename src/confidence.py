@@ -87,26 +87,23 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     y_pred, p_conf, y, lengths = torch_confidence(model, dset=test, prog_bar=prog_bar, device=device, beam_width=beam_width)
     model.cpu()
     cer, wer = cer_wer(y_pred, y, test)
+    
 
-    sorted_err = np.argsort((cer + p_conf) ** 2)
-    worst = [test[i] for i in sorted_err[-4:]]
-    best = [test[i] for i in sorted_err[:4]]
-    explanations_worst = []
-    explanations_best = []
-    for i in range(4):
-        worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst[i:i + 1])
-        explanations_worst.append([
-            visualize.explanation_plot(worst_imgs, model, worst_targets,
-                                        L_IN=[seq_len], l_targets=worst_ltargets, framework='torch'),
-            worst_imgs
-        ])
-        best_imgs, best_targets, best_ltargets = test.batch_transform(best[i:i + 1])
-        explanations_best.append([
-            visualize.explanation_plot(best_imgs, model, best_targets,
-                                       L_IN=[seq_len], l_targets=best_ltargets, framework='torch'),
-            best_imgs
-        ])
+    idx_comp = np.argmin(cer - p_conf)
+    idx_bias = np.argmax(cer + p_conf)
+
+    worst = test[idx_bias]
+    best = test[idx_comp]
+    worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
+    explanations_worst = [visualize.explanation_plot(worst_imgs, model, worst_targets,
+                                                     L_IN=[], l_targets=worst_ltargets, framework='torch'),
+                          worst_imgs]
+    best_imgs, best_targets, best_ltargets = test.batch_transform([best])
+    explanations_best = [visualize.explanation_plot(best_imgs, model, best_targets,
+                                                    L_IN=[], l_targets=best_ltargets, framework='torch'),
+                         best_imgs]
     explanations = [explanations_worst, explanations_best]
+
     return y_pred, p_conf, y, cer, wer, explanations, lengths
 
 
@@ -189,27 +186,22 @@ def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=
     y_pred, p_conf, y, lengths = clstm_confidence(net=net, dset=test, prog_bar=prog_bar, beam_width=beam_width)
     cer, wer = cer_wer(y_pred, y, test)
     
-    sorted_err = np.argsort((cer + p_conf)**2)
-    worst = [test[i] for i in sorted_err[-4:]]
-    best = [test[i] for i in sorted_err[:4]]
-    explanations_worst = []
-    explanations_best = []
-    for i in range(4):
-        worst_imgs, worst_targets, worst_ltargets = test.batch_transform(worst[i:i+1])
-        explanations_worst.append([
-            visualize.explanation_plot(worst_imgs, net, worst_targets,
-                                       L_IN=[], l_targets=worst_ltargets, framework='clstm'),
-            worst_imgs
-        ])
-        best_imgs, best_targets, best_ltargets = test.batch_transform(best[i:i + 1])
-        explanations_best.append([
-            visualize.explanation_plot(best_imgs, net, best_targets,
-                                       L_IN=[], l_targets=best_ltargets, framework='clstm'),
-            best_imgs
-        ])
+    
+    idx_comp = np.argmin(cer - p_conf)
+    idx_bias = np.argmax(cer + p_conf)
+
+    worst = test[idx_bias]
+    best = test[idx_comp]
+    worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
+    explanations_worst = [visualize.explanation_plot(worst_imgs, net, worst_targets,
+                                                     L_IN=[], l_targets=worst_ltargets, framework='clstm'),
+                          worst_imgs]
+    best_imgs, best_targets, best_ltargets = test.batch_transform([best])
+    explanations_best = [visualize.explanation_plot(best_imgs, net, best_targets,
+                                                    L_IN=[], l_targets=best_ltargets, framework='clstm'),
+                         best_imgs]
     explanations = [explanations_worst, explanations_best]
     return y_pred, p_conf, y, cer, wer, explanations, lengths
-
 
 
 def main_method(mode='torch', cluster=True):
@@ -239,9 +231,12 @@ def main_method(mode='torch', cluster=True):
         raise ValueError(f'unknown mode: {mode}')
     write_results(ap.out, preds, confs, targets, list(cer), list(wer), explanations)
     visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, 'conf_plot'))
-    visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, 'len_plot'))
+    visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, 'cer_len_plot'))
+    visualize.len_plot(cer=confs, lengths=lengths, save_path=os.path.join(ap.out, 'conf_len_plot'))
     visualize.corrections_plot(err=cer, save_path=os.path.join(ap.out, 'corrections_plot_CER'))
     visualize.corrections_plot(err=wer, save_path=os.path.join(ap.out, 'corrections_plot_WER'))
+    visualize.threshold_plot(err=cer, confs=confs, save_path=os.path.join(ap.out, 'threshold_plot_CER'))
+    visualize.threshold_plot(err=wer, confs=confs, save_path=os.path.join(ap.out, 'threshold_plot_WER'))
     return preds, confs, targets, cer, wer
 
 
@@ -255,7 +250,7 @@ def write_results(out, preds, confs, targets, cer, wer, explanations=None):
         with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
             pickle.dump(targets, f_tgt)
         with open(os.path.join(out, 'WER_CER.json'), 'w') as f_cer:
-            json.dump({'cer_list': cer, 'cer': np.mean(cer), 'wer_list': wer, 'wer':np.mean(wer)}, f_cer)
+            json.dump({'cer': np.mean(cer), 'wer': np.mean(wer)}, f_cer)
         with open(os.path.join(out, 'explanations.pkl'), 'wb') as f_explain:
             pickle.dump(explanations, f_explain)
 
@@ -268,4 +263,3 @@ if __name__ == '__main__':
     else:
         from src import clstm_eval
         main_method('clstm', cluster=True)
-    
