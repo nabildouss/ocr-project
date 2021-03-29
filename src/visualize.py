@@ -331,7 +331,7 @@ def len_plot(cer, lengths, save_path, bin_len=20):
     plt.savefig(save_path)
 
 
-def correctiosn_plot(err, save_path):
+def corrections_plot(err, save_path):
     err = np.array(err)
     idcs = np.argsort(err)
     err = err[idcs][::-1]
