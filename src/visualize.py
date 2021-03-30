@@ -256,9 +256,9 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         plt.clf()
         X = np.arange(input_img.shape[1])
         Y = np.mean(input_img, axis=0)
-        plt.plot(X,Y)
+        plt.plot(X, Y)
         plt.xlabel('sequence step')
-        plt.xlabel('mean of grad x input')
+        plt.ylabel('mean of grad x input')
         plt.savefig(save_path + 'grad_mean.png')
         input /= input_img.max()
         input *= 255

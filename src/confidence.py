@@ -234,14 +234,15 @@ def main_method(mode='torch', cluster=True):
         )
     else:
         raise ValueError(f'unknown mode: {mode}')
+    prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_ids)].value}_'
     write_results(ap.out, preds, confs, targets, list(cer), list(wer), explanations)
-    visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, 'conf_plot'))
-    visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, 'cer_len_plot'))
-    visualize.len_plot(cer=confs, lengths=lengths, save_path=os.path.join(ap.out, 'conf_len_plot'))
-    visualize.corrections_plot(err=cer, save_path=os.path.join(ap.out, 'corrections_plot_CER'))
-    visualize.corrections_plot(err=wer, save_path=os.path.join(ap.out, 'corrections_plot_WER'))
-    visualize.threshold_plot(err=cer, confs=confs, save_path=os.path.join(ap.out, 'threshold_plot_CER'))
-    visualize.threshold_plot(err=wer, confs=confs, save_path=os.path.join(ap.out, 'threshold_plot_WER'))
+    visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, prefix+'conf_plot'))
+    visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, prefix+'cer_len_plot'))
+    visualize.len_plot(cer=confs, lengths=lengths, save_path=os.path.join(ap.out, prefix+'conf_len_plot'), xlabel='confidence')
+    visualize.corrections_plot(err=cer, save_path=os.path.join(ap.out, prefix+'corrections_plot_CER'))
+    visualize.corrections_plot(err=wer, save_path=os.path.join(ap.out, prefix+'corrections_plot_WER'))
+    visualize.threshold_plot(err=cer, confs=confs, save_path=os.path.join(ap.out, prefix+'threshold_plot_CER'), ylabel='CER')
+    visualize.threshold_plot(err=wer, confs=confs, save_path=os.path.join(ap.out, prefix+'threshold_plot_WER'), ylabel='WER')
     return preds, confs, targets, cer, wer
 
 
