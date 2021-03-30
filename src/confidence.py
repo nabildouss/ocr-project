@@ -214,6 +214,8 @@ def main_method(mode='torch', cluster=True):
         ap = parser_torch()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
+        if not os.path.isdir(ap.out):
+            os.makedirs(ap.out)
         device = torch.device(ap.device)
         if ap.model_type == 'Baseline3':
             preds, confs, targets, cer, wer, explanations, lengths = sw(
@@ -227,6 +229,8 @@ def main_method(mode='torch', cluster=True):
         ap = parser_clstm()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
+        if not os.path.isdir(ap.out):
+            os.makedirs(ap.out)
         preds, confs, targets, cer, wer, explanations, lengths = clstm(
             data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
             pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
@@ -234,7 +238,10 @@ def main_method(mode='torch', cluster=True):
         )
     else:
         raise ValueError(f'unknown mode: {mode}')
-    prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_ids)].value}_'
+    if mode == 'torch':
+        prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_ids)].value}_'
+    else:
+        prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_id)].value}_'
     write_results(ap.out, preds, confs, targets, list(cer), list(wer), explanations)
     visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, prefix+'conf_plot'))
     visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, prefix+'cer_len_plot'))
