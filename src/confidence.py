@@ -238,7 +238,10 @@ def main_method(mode='torch', cluster=True):
         )
     else:
         raise ValueError(f'unknown mode: {mode}')
-    prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_ids)].value}_'
+    if mode == 'torch':
+        prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_ids)].value}_'
+    else:
+        prefix = f'{mode}_{data.ALL_CORPORA[int(ap.corpus_id)].value}_'
     write_results(ap.out, preds, confs, targets, list(cer), list(wer), explanations)
     visualize.confidence_plot(cer=cer, confs=confs, save_path=os.path.join(ap.out, prefix+'conf_plot'))
     visualize.len_plot(cer=cer, lengths=lengths, save_path=os.path.join(ap.out, prefix+'cer_len_plot'))
