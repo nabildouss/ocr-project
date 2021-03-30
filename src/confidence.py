@@ -214,6 +214,8 @@ def main_method(mode='torch', cluster=True):
         ap = parser_torch()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
+        if not os.path.isdir(ap.out):
+            os.makedirs(ap.out)
         device = torch.device(ap.device)
         if ap.model_type == 'Baseline3':
             preds, confs, targets, cer, wer, explanations, lengths = sw(
@@ -227,6 +229,8 @@ def main_method(mode='torch', cluster=True):
         ap = parser_clstm()
         ap.add_argument('--beam_width', default=1, type=int)
         ap = ap.parse_args()
+        if not os.path.isdir(ap.out):
+            os.makedirs(ap.out)
         preds, confs, targets, cer, wer, explanations, lengths = clstm(
             data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
             pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
