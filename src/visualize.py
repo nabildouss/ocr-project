@@ -304,7 +304,7 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         return pos_grad_x_inp
 
 
-def len_plot(cer, lengths, save_path, bin_len=20):
+def len_plot(cer, lengths, save_path, bin_len=20, xlabel='CER'):
     plt.clf()
     cer = np.array(cer)
     lengths = np.array(lengths)
@@ -328,7 +328,7 @@ def len_plot(cer, lengths, save_path, bin_len=20):
             e.append(cer[k])
             i += 1
     plt.plot(X, Y)
-    plt.xlabel('CER')
+    plt.xlabel(xlabel)
     plt.ylabel('length')
     plt.savefig(save_path)
 
@@ -358,7 +358,7 @@ def corrections_plot(err, save_path):
         ERR.append(new_acc)
     plt.plot(corrections, ERR)
     for t in ticks:
-        plt.vlines(t, np.mean(err), 1, 'r', 'dotted')
+        plt.vlines(t, np.amin(ERR), np.amax(ERR), 'r', 'dotted')
     #plt.xticks(list(plt.xticks()[0]) + ticks)
     plt.xlabel(f'# corrections, breaks at {ticks}')
     plt.ylabel('accuracy')
@@ -366,6 +366,7 @@ def corrections_plot(err, save_path):
 
 
 def threshold_plot(err, confs, save_path, ylabel='error rate'):
+    plt.clf()
     threshs = np.arange(start=0.5, stop=1, step=0.1)
     err = np.array(err)
     confs = np.array(confs)
