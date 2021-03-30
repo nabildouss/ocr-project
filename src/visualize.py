@@ -248,7 +248,18 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
 
     pos_grad_x_inp = input * pos_grad
     if save_path is not None:
+        if not isinstance(input, np.ndarray):
+            input = input.detach().cpu().numpy()
+        if not isinstance(pos_grad_x_inp, np.ndarray):
+            pos_grad_x_inp = pos_grad_x_inp.detach().cpu().numpy()
         input_img = np.squeeze(input)
+        plt.clf()
+        X = np.arange(input_img.shape[1])
+        Y = np.mean(input_img, axis=0)
+        plt.plot(X,Y)
+        plt.xlabel('sequence step')
+        plt.xlabel('mean of grad x input')
+        plt.savefig(save_path + 'grad_mean.png')
         input /= input_img.max()
         input *= 255
         pos_grad_x_inp_img = np.squeeze(pos_grad_x_inp)
@@ -256,8 +267,8 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         pos_grad_x_inp_img *= 255
         input_img = cv2.resize(input_img, (512, 32))
         pos_grad_x_inp_img = cv2.resize(pos_grad_x_inp_img, (512, 32))
-        cv2.imshow(os.path.join(save_path, 'input_img.png'), input_img)
-        cv2.imshow(os.path.join(save_path, 'grad_img.png'), pos_grad_x_inp_img)
+        cv2.imwrite(save_path + 'input_img.png', input_img)
+        cv2.imwrite(save_path + 'grad_img.png', pos_grad_x_inp_img)
     return pos_grad_x_inp
 
 

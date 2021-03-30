@@ -98,12 +98,12 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
     explanations_worst = [visualize.explanation_plot(worst_imgs, model, worst_targets,
                                                      L_IN=[seq_len], l_targets=worst_ltargets, framework='torch',
-                                                     save_path=out),
+                                                     save_path=os.path.join(out, 'worst')),
                           worst_imgs]
     best_imgs, best_targets, best_ltargets = test.batch_transform([best])
     explanations_best = [visualize.explanation_plot(best_imgs, model, best_targets,
                                                     L_IN=[seq_len], l_targets=best_ltargets, framework='torch',
-                                                    save_path=out),
+                                                    save_path=os.path.join(out, 'best')),
                          best_imgs]
     explanations = [explanations_worst, explanations_best]
 
@@ -198,12 +198,12 @@ def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
     explanations_worst = [visualize.explanation_plot(worst_imgs, net, worst_targets,
                                                      L_IN=[], l_targets=worst_ltargets, framework='clstm',
-                                                     save_path=out),
+                                                     save_path=os.path.join(out, 'worst')),
                           worst_imgs]
     best_imgs, best_targets, best_ltargets = test.batch_transform([best])
     explanations_best = [visualize.explanation_plot(best_imgs, net, best_targets,
                                                     L_IN=[], l_targets=best_ltargets, framework='clstm',
-                                                    save_path=out),
+                                                    save_path=os.path.join(out, 'best')),
                          best_imgs]
     explanations = [explanations_worst, explanations_best]
     return y_pred, p_conf, y, cer, wer, explanations, lengths
