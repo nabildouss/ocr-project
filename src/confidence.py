@@ -72,7 +72,8 @@ def parser_torch():
     return evaluation.arg_parser()
 
 
-def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster=True, device=None, beam_width=100):
+def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster=True, device=None, beam_width=100,
+       out=None):
     _, test = ms1.load_data(data_set,
                             transformation=Compose([Resize([pixels, pixels * seq_len]), ToTensor()]),
                             corpora=corpora, cluster=cluster)
@@ -96,11 +97,13 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     best = test[idx_comp]
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
     explanations_worst = [visualize.explanation_plot(worst_imgs, model, worst_targets,
-                                                     L_IN=[seq_len], l_targets=worst_ltargets, framework='torch'),
+                                                     L_IN=[seq_len], l_targets=worst_ltargets, framework='torch',
+                                                     save_path=out),
                           worst_imgs]
     best_imgs, best_targets, best_ltargets = test.batch_transform([best])
     explanations_best = [visualize.explanation_plot(best_imgs, model, best_targets,
-                                                    L_IN=[seq_len], l_targets=best_ltargets, framework='torch'),
+                                                    L_IN=[seq_len], l_targets=best_ltargets, framework='torch',
+                                                    save_path=out),
                          best_imgs]
     explanations = [explanations_worst, explanations_best]
 
@@ -175,7 +178,7 @@ def parser_clstm():
     return clstm_eval.parser()
 
 
-def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=100):
+def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=100, out=None):
     _, test = ms1.load_data(data_set=data_set, corpora=corpora, cluster=cluster, transformation=Compose([ToTensor()]))
     # _, test = ms1.load_data(corpora=corpora, cluster=False, transformation=Compose([ToTensor()]))
     # construct network
@@ -194,11 +197,13 @@ def clstm(data_set, corpora, pth_model, prog_bar=True, cluster=True, beam_width=
     best = test[idx_comp]
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
     explanations_worst = [visualize.explanation_plot(worst_imgs, net, worst_targets,
-                                                     L_IN=[], l_targets=worst_ltargets, framework='clstm'),
+                                                     L_IN=[], l_targets=worst_ltargets, framework='clstm',
+                                                     save_path=out),
                           worst_imgs]
     best_imgs, best_targets, best_ltargets = test.batch_transform([best])
     explanations_best = [visualize.explanation_plot(best_imgs, net, best_targets,
-                                                    L_IN=[], l_targets=best_ltargets, framework='clstm'),
+                                                    L_IN=[], l_targets=best_ltargets, framework='clstm',
+                                                    save_path=out),
                          best_imgs]
     explanations = [explanations_worst, explanations_best]
     return y_pred, p_conf, y, cer, wer, explanations, lengths
@@ -214,7 +219,7 @@ def main_method(mode='torch', cluster=True):
             preds, confs, targets, cer, wer, explanations, lengths = sw(
                 data_set=ap.data_set, corpora=[data.ALL_CORPORA[int(ap.corpus_ids)]], pixels=32,
                 pth_model=ap.pth_model, prog_bar=ap.prog_bar, cluster=cluster, device=device,
-                beam_width=ap.beam_width
+                beam_width=ap.beam_width, out=ap.out
             )
         else:
             raise ValueError(f'unknown model: {ap.model_type}')
@@ -225,7 +230,7 @@ def main_method(mode='torch', cluster=True):
         preds, confs, targets, cer, wer, explanations, lengths = clstm(
             data_set='GT4HistOCR', corpora=[data.ALL_CORPORA[ap.corpus_id]],
             pth_model=ap.clstm_path, prog_bar=ap.prog_bar, cluster=cluster,
-            beam_width=ap.beam_width
+            beam_width=ap.beam_width, out=ap.out
         )
     else:
         raise ValueError(f'unknown mode: {mode}')

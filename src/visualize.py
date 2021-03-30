@@ -244,64 +244,21 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
         model.backward()
 
         pos_grad = model.d_inputs.array()
-        pos_grad = pos_grad * (pos_grad>0)
+        pos_grad *= (pos_grad>0)
 
-        # max_vals = torch.max(input.grad.data[0, 0], dim=0)[0].detach().numpy()
-        # min_vals = torch.min(input.grad.data[0, 0], dim=0)[0].detach().numpy()
-        # X = np.arange(len(max_vals))
-        # plt.plot(X, max_vals)
-        # plt.plot(X, min_vals)
-        # plt.show()
-        #
-        # loc_imp = local_importance(pos_grad[0, 0].detach().numpy()[:, :WIDTH])
-        # loc_max_vals = torch.max(torch.tensor(loc_imp), dim=0)[0].detach().numpy()
-        # max_vals = torch.max(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
-        # min_vals = torch.min(input.grad.data[0, 0], dim=0)[0][:WIDTH].detach().numpy()
-        # X = np.arange(len(max_vals))
-        # plt.plot(X, loc_max_vals)
-        # plt.plot(X, max_vals)
-        # plt.plot(X, min_vals)
-        # plt.show()
-        #
-        #
-        # plt.imshow(abs_gradients[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # plt.title('abs gradients')
-        # plt.show()
-        #
-        # # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # # plt.show()
-        #
-        # # plt.imshow(grad_above_0[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # # plt.show()
-        #
-        # # plt.imshow(pos_grad[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # # plt.show()
-        #
-        # plt.show()
-        #
-        # plt.imshow(loc_imp, cmap='bone')
-        # plt.title('local importance')
-        # plt.show()
-        #
-        # plt.imshow(loc_imp*input.data[0,0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # plt.title('local importance x image')
-        # plt.show()
-        #
-        # plt.imshow(pos_grad_x_inp[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # plt.title('pos gradient x image')
-        # plt.show()
-        #
-        # plt.imshow(input[0, 0].detach().numpy()[:, :WIDTH], cmap='bone')
-        # plt.title('input')
-        # plt.show()
-        #
-        # if save_path is not None:
-        #     plt.savefig(save_path)
-        # if show is not None:
-        #     plt.show()
-
-        pos_grad_x_inp = input * pos_grad
-        return pos_grad_x_inp
+    pos_grad_x_inp = input * pos_grad
+    if save_path is not None:
+        input_img = np.squeeze(input)
+        input /= input_img.max()
+        input *= 255
+        pos_grad_x_inp_img = np.squeeze(pos_grad_x_inp)
+        pos_grad_x_inp_img /= pos_grad_x_inp_img.max()
+        pos_grad_x_inp_img *= 255
+        input_img = cv2.resize(input_img, (512, 32))
+        pos_grad_x_inp_img = cv2.resize(pos_grad_x_inp_img, (512, 32))
+        cv2.imshow(os.path.join(save_path, 'input_img.png'), input_img)
+        cv2.imshow(os.path.join(save_path, 'grad_img.png'), pos_grad_x_inp_img)
+    return pos_grad_x_inp
 
 
 def len_plot(cer, lengths, save_path, bin_len=20, xlabel='CER'):
