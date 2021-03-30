@@ -249,16 +249,16 @@ def main_method(mode='torch', cluster=True):
 def write_results(out, preds, confs, targets, cer, wer, explanations=None):
         if not os.path.isdir(out):
             os.makedirs(out)
-        with open(os.path.join(out, 'predictions.pkl'), 'wb') as f_pred:
-            pickle.dump(preds, f_pred)
-        with open(os.path.join(out, 'confidences.pkl'), 'wb') as f_conf:
-            pickle.dump(confs, f_conf)
-        with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
-            pickle.dump(targets, f_tgt)
+        # with open(os.path.join(out, 'predictions.pkl'), 'wb') as f_pred:
+        #     pickle.dump(preds, f_pred)
+        # with open(os.path.join(out, 'confidences.pkl'), 'wb') as f_conf:
+        #     pickle.dump(confs, f_conf)
+        # with open(os.path.join(out, 'targets.pkl'), 'wb') as f_tgt:
+        #     pickle.dump(targets, f_tgt)
         with open(os.path.join(out, 'WER_CER.json'), 'w') as f_cer:
             json.dump({'cer': np.mean(cer), 'wer': np.mean(wer)}, f_cer)
-        with open(os.path.join(out, 'explanations.pkl'), 'wb') as f_explain:
-            pickle.dump(explanations, f_explain)
+        #with open(os.path.join(out, 'explanations.pkl'), 'wb') as f_explain:
+        #    pickle.dump(explanations, f_explain)
 
 
 if __name__ == '__main__':
