@@ -96,11 +96,11 @@ def sw(data_set, corpora, pixels, pth_model, seq_len=256, prog_bar=True, cluster
     best = test[idx_comp]
     worst_imgs, worst_targets, worst_ltargets = test.batch_transform([worst])
     explanations_worst = [visualize.explanation_plot(worst_imgs, model, worst_targets,
-                                                     L_IN=[], l_targets=worst_ltargets, framework='torch'),
+                                                     L_IN=[seq_len], l_targets=worst_ltargets, framework='torch'),
                           worst_imgs]
     best_imgs, best_targets, best_ltargets = test.batch_transform([best])
     explanations_best = [visualize.explanation_plot(best_imgs, model, best_targets,
-                                                    L_IN=[], l_targets=best_ltargets, framework='torch'),
+                                                    L_IN=[seq_len], l_targets=best_ltargets, framework='torch'),
                          best_imgs]
     explanations = [explanations_worst, explanations_best]
 
