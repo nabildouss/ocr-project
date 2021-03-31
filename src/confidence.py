@@ -270,9 +270,12 @@ def write_results(out, preds, confs, targets, cer, wer, explanations=None):
 
 if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
-    if os.path.isdir('../corpus'):
-        y_pred, p_conf, y, cer, wer = main_method('torch', cluster=False)
-    # from src import clstm_eval, clstm_train
-    else:
-        from src import clstm_eval
-        main_method('clstm', cluster=True)
+    # for baseline model use this 
+    # python3 confidence.py --model_type=Baseline3 --device=cpu --pth_model=/home/pml_22/MS3/ocr-project/src/SW_models/sw_0 --batch_size=4 --corpus_ids=0 --out=confidence_100K_BS100/sw_0 --beam_width=100
+    y_pred, p_conf, y, cer, wer = main_method('torch', cluster=True)
+
+    # for CLSTM use this
+    # python3 confidence.py --clstm_path=/home/pml_22/MS3/ocr-project/src/CLSTM_models/clstm0.clstm --out=confidence_CLSTM_100K_BS100/clstm0 --corpus_id=0 --beam_width=100
+    # from src import clstm_eval
+    # main_method('clstm', cluster=True)
+

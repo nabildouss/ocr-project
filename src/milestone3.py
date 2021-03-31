@@ -1,3 +1,5 @@
+# Note: the script, that executes evaluation is confidence.py
+#       have a look at the __main__ of that script, to run evalutation
 from src import ctc_decoder, visualize
 import cv2
 
