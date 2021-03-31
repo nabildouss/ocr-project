@@ -252,11 +252,14 @@ def explanation_plot(input, model, targets, L_IN, l_targets, framework='torch', 
             input = input.detach().cpu().numpy()
         if not isinstance(pos_grad_x_inp, np.ndarray):
             pos_grad_x_inp = pos_grad_x_inp.detach().cpu().numpy()
-        input_img = np.squeeze(input)
-        if not isinstance(input, np.ndarray):
+        if framework != 'torch':
+            input = np.squeeze(input)
             input = input.T
-        if not isinstance(pos_grad_x_inp, np.ndarray):
+            print(input.shape)
+            pos_grad_x_inp = np.squeeze(pos_grad_x_inp )
             pos_grad_x_inp = pos_grad_x_inp.T
+            print(pos_grad_x_inp.shape)
+        input_img = np.squeeze(input)
         plt.clf()
         X = np.arange(input_img.shape[1])
         Y = np.mean(input_img, axis=0)
