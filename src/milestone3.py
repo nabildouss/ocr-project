@@ -1,4 +1,4 @@
-from src import ctc_decoder
+from src import ctc_decoder, visualize
 import cv2
 
 
@@ -20,3 +20,7 @@ def predict(x, model, decoder, dset, framework='torch'):
         return pred, conf
     else:
         raise ValueError(f'unknown framework: {framework}\nPlease choose between torch or clstm')
+    
+
+def explain(input, model, targets, L_IN, l_targets, framework='torch'):
+    return visualize.explanation_plot(input, model, targets, L_IN, l_targets, framework)
